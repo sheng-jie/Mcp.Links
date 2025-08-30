@@ -1,0 +1,554 @@
+@namespace Mcp.Links.Http.Pages.Mcp
+
+@using System.ComponentModel
+@using AntDesign.TableModels
+@using AntDesign
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using System.Text.Encodings.Web
+@using System.ComponentModel.DataAnnotations
+
+@page "/mcp/env-check"
+@page "/mcp/environment-check"
+
+<PageHeader Class="site-page-header" Title="MCP Environment Check" SubTitle="Verify required dependencies for Model Context Protocol servers">
+    <PageHeaderExtra>
+        <Space>
+            <SpaceItem>
+                <Button Type="ButtonType.Primary" OnClick="CheckAllEnvironments" Loading="@isCheckingAll">
+                    <Icon Type="reload" Theme="IconThemeType.Outline" />
+                    @(isCheckingAll ? "Checking..." : "Check All")
+                </Button>
+            </SpaceItem>
+        </Space>
+    </PageHeaderExtra>
+</PageHeader>
+
+<div style="margin-bottom: 24px;">
+    <Card Title="Node.js Environment" Style="margin-bottom: 24px;">
+        <Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Large" Style="width: 100%;">
+            <!-- Node.js Check -->
+            <SpaceItem>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <Icon Type="@(nodeStatus.Icon)" 
+                              Theme="IconThemeType.Outline" 
+                              Style="@($"color: {nodeStatus.Color}; font-size: 18px;")" />
+                        <div>
+                            <Text Strong>Node.js</Text>
+                            <br />
+                            <Text Type="TextElementType.Secondary">JavaScript runtime for executing MCP servers</Text>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        @if (nodeStatus.Loading)
+                        {
+                            <Spin Size="SpinSize.Small" />
+                        }
+                        else
+                        {
+                            <div>
+                                @if (!string.IsNullOrEmpty(nodeStatus.Version))
+                                {
+                                    <Tag Color="@(nodeStatus.Status == CheckStatus.Success ? TagColor.Success : TagColor.Error)">
+                                        @nodeStatus.Version
+                                    </Tag>
+                                }
+                                else if (nodeStatus.Status == CheckStatus.Error)
+                                {
+                                    <Tag Color="TagColor.Error">Not Found</Tag>
+                                }
+                                <br />
+                                <Button Type="ButtonType.Link" 
+                                        Size="ButtonSize.Small" 
+                                        OnClick="() => CheckNodejs()" 
+                                        Loading="@nodeStatus.Loading">
+                                    Check
+                                </Button>
+                            </div>
+                        }
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(nodeStatus.Message))
+                {
+                    <div style="margin-top: 8px; margin-left: 30px;">
+                        <Text Type="@(nodeStatus.Status == CheckStatus.Error ? TextElementType.Danger : TextElementType.Secondary)">
+                            @nodeStatus.Message
+                        </Text>
+                    </div>
+                }
+            </SpaceItem>
+
+            <!-- NPX Check -->
+            <SpaceItem>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <Icon Type="@(npxStatus.Icon)" 
+                              Theme="IconThemeType.Outline" 
+                              Style="@($"color: {npxStatus.Color}; font-size: 18px;")" />
+                        <div>
+                            <Text Strong>NPX</Text>
+                            <br />
+                            <Text Type="TextElementType.Secondary">Package execution tool for running MCP servers</Text>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        @if (npxStatus.Loading)
+                        {
+                            <Spin Size="SpinSize.Small" />
+                        }
+                        else
+                        {
+                            <div>
+                                @if (!string.IsNullOrEmpty(npxStatus.Version))
+                                {
+                                    <Tag Color="@(npxStatus.Status == CheckStatus.Success ? TagColor.Success : TagColor.Error)">
+                                        @npxStatus.Version
+                                    </Tag>
+                                }
+                                else if (npxStatus.Status == CheckStatus.Error)
+                                {
+                                    <Tag Color="TagColor.Error">Not Found</Tag>
+                                }
+                                <br />
+                                <Button Type="ButtonType.Link" 
+                                        Size="ButtonSize.Small" 
+                                        OnClick="() => CheckNpx()" 
+                                        Loading="@npxStatus.Loading">
+                                    Check
+                                </Button>
+                            </div>
+                        }
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(npxStatus.Message))
+                {
+                    <div style="margin-top: 8px; margin-left: 30px;">
+                        <Text Type="@(npxStatus.Status == CheckStatus.Error ? TextElementType.Danger : TextElementType.Secondary)">
+                            @npxStatus.Message
+                        </Text>
+                    </div>
+                }
+            </SpaceItem>
+        </Space>
+    </Card>
+</div>
+
+<div style="margin-bottom: 24px;">
+    <Card Title=".NET Environment" Style="margin-bottom: 24px;">
+        <Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Large" Style="width: 100%;">
+            <!-- .NET Check -->
+            <SpaceItem>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <Icon Type="@(dotnetStatus.Icon)" 
+                              Theme="IconThemeType.Outline" 
+                              Style="@($"color: {dotnetStatus.Color}; font-size: 18px;")" />
+                        <div>
+                            <Text Strong>.NET</Text>
+                            <br />
+                            <Text Type="TextElementType.Secondary">.NET runtime for building and running .NET applications</Text>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        @if (dotnetStatus.Loading)
+                        {
+                            <Spin Size="SpinSize.Small" />
+                        }
+                        else
+                        {
+                            <div>
+                                @if (!string.IsNullOrEmpty(dotnetStatus.Version))
+                                {
+                                    <Tag Color="@(dotnetStatus.Status == CheckStatus.Success ? TagColor.Success : TagColor.Error)">
+                                        @dotnetStatus.Version
+                                    </Tag>
+                                }
+                                else if (dotnetStatus.Status == CheckStatus.Error)
+                                {
+                                    <Tag Color="TagColor.Error">Not Found</Tag>
+                                }
+                                <br />
+                                <Button Type="ButtonType.Link" 
+                                        Size="ButtonSize.Small" 
+                                        OnClick="() => CheckDotnet()" 
+                                        Loading="@dotnetStatus.Loading">
+                                    Check
+                                </Button>
+                            </div>
+                        }
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(dotnetStatus.Message))
+                {
+                    <div style="margin-top: 8px; margin-left: 30px;">
+                        <Text Type="@(dotnetStatus.Status == CheckStatus.Error ? TextElementType.Danger : TextElementType.Secondary)">
+                            @dotnetStatus.Message
+                        </Text>
+                    </div>
+                }
+            </SpaceItem>
+
+            <!-- DNX Check -->
+            <SpaceItem>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <Icon Type="@(dnxStatus.Icon)" 
+                              Theme="IconThemeType.Outline" 
+                              Style="@($"color: {dnxStatus.Color}; font-size: 18px;")" />
+                        <div>
+                            <Text Strong>DNX</Text>
+                            <br />
+                            <Text Type="TextElementType.Secondary">Tool execution utility for running .NET applications</Text>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        @if (dnxStatus.Loading)
+                        {
+                            <Spin Size="SpinSize.Small" />
+                        }
+                        else
+                        {
+                            <div>
+                                @if (!string.IsNullOrEmpty(dnxStatus.Version))
+                                {
+                                    <Tag Color="@(dnxStatus.Status == CheckStatus.Success ? TagColor.Success : TagColor.Error)">
+                                        @dnxStatus.Version
+                                    </Tag>
+                                }
+                                else if (dnxStatus.Status == CheckStatus.Error)
+                                {
+                                    <Tag Color="TagColor.Error">Not Found</Tag>
+                                }
+                                <br />
+                                <Button Type="ButtonType.Link" 
+                                        Size="ButtonSize.Small" 
+                                        OnClick="() => CheckDnx()" 
+                                        Loading="@dnxStatus.Loading">
+                                    Check
+                                </Button>
+                            </div>
+                        }
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(dnxStatus.Message))
+                {
+                    <div style="margin-top: 8px; margin-left: 30px;">
+                        <Text Type="@(dnxStatus.Status == CheckStatus.Error ? TextElementType.Danger : TextElementType.Secondary)">
+                            @dnxStatus.Message
+                        </Text>
+                    </div>
+                }
+            </SpaceItem>
+        </Space>
+    </Card>
+</div>
+
+<div style="margin-bottom: 24px;">
+    <Card Title="Python Environment" Style="margin-bottom: 24px;">
+        <Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Large" Style="width: 100%;">
+            <!-- Python Check -->
+            <SpaceItem>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <Icon Type="@(pythonStatus.Icon)" 
+                              Theme="IconThemeType.Outline" 
+                              Style="@($"color: {pythonStatus.Color}; font-size: 18px;")" />
+                        <div>
+                            <Text Strong>Python</Text>
+                            <br />
+                            <Text Type="TextElementType.Secondary">Python runtime for executing Python-based MCP servers</Text>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        @if (pythonStatus.Loading)
+                        {
+                            <Spin Size="SpinSize.Small" />
+                        }
+                        else
+                        {
+                            <div>
+                                @if (!string.IsNullOrEmpty(pythonStatus.Version))
+                                {
+                                    <Tag Color="@(pythonStatus.Status == CheckStatus.Success ? TagColor.Success : TagColor.Error)">
+                                        @pythonStatus.Version
+                                    </Tag>
+                                }
+                                else if (pythonStatus.Status == CheckStatus.Error)
+                                {
+                                    <Tag Color="TagColor.Error">Not Found</Tag>
+                                }
+                                <br />
+                                <Button Type="ButtonType.Link" 
+                                        Size="ButtonSize.Small" 
+                                        OnClick="() => CheckPython()" 
+                                        Loading="@pythonStatus.Loading">
+                                    Check
+                                </Button>
+                            </div>
+                        }
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(pythonStatus.Message))
+                {
+                    <div style="margin-top: 8px; margin-left: 30px;">
+                        <Text Type="@(pythonStatus.Status == CheckStatus.Error ? TextElementType.Danger : TextElementType.Secondary)">
+                            @pythonStatus.Message
+                        </Text>
+                    </div>
+                }
+            </SpaceItem>
+
+            <!-- UV Check -->
+            <SpaceItem>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <Icon Type="@(uvStatus.Icon)" 
+                              Theme="IconThemeType.Outline" 
+                              Style="@($"color: {uvStatus.Color}; font-size: 18px;")" />
+                        <div>
+                            <Text Strong>UV</Text>
+                            <br />
+                            <Text Type="TextElementType.Secondary">Fast Python package installer and resolver</Text>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        @if (uvStatus.Loading)
+                        {
+                            <Spin Size="SpinSize.Small" />
+                        }
+                        else
+                        {
+                            <div>
+                                @if (!string.IsNullOrEmpty(uvStatus.Version))
+                                {
+                                    <Tag Color="@(uvStatus.Status == CheckStatus.Success ? TagColor.Success : TagColor.Error)">
+                                        @uvStatus.Version
+                                    </Tag>
+                                }
+                                else if (uvStatus.Status == CheckStatus.Error)
+                                {
+                                    <Tag Color="TagColor.Error">Not Found</Tag>
+                                }
+                                <br />
+                                <Button Type="ButtonType.Link" 
+                                        Size="ButtonSize.Small" 
+                                        OnClick="() => CheckUv()" 
+                                        Loading="@uvStatus.Loading">
+                                    Check
+                                </Button>
+                            </div>
+                        }
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(uvStatus.Message))
+                {
+                    <div style="margin-top: 8px; margin-left: 30px;">
+                        <Text Type="@(uvStatus.Status == CheckStatus.Error ? TextElementType.Danger : TextElementType.Secondary)">
+                            @uvStatus.Message
+                        </Text>
+                    </div>
+                }
+            </SpaceItem>
+
+            <!-- UVX Check -->
+            <SpaceItem>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <Icon Type="@(uvxStatus.Icon)" 
+                              Theme="IconThemeType.Outline" 
+                              Style="@($"color: {uvxStatus.Color}; font-size: 18px;")" />
+                        <div>
+                            <Text Strong>UVX</Text>
+                            <br />
+                            <Text Type="TextElementType.Secondary">Tool execution utility for running Python applications</Text>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        @if (uvxStatus.Loading)
+                        {
+                            <Spin Size="SpinSize.Small" />
+                        }
+                        else
+                        {
+                            <div>
+                                @if (!string.IsNullOrEmpty(uvxStatus.Version))
+                                {
+                                    <Tag Color="@(uvxStatus.Status == CheckStatus.Success ? TagColor.Success : TagColor.Error)">
+                                        @uvxStatus.Version
+                                    </Tag>
+                                }
+                                else if (uvxStatus.Status == CheckStatus.Error)
+                                {
+                                    <Tag Color="TagColor.Error">Not Found</Tag>
+                                }
+                                <br />
+                                <Button Type="ButtonType.Link" 
+                                        Size="ButtonSize.Small" 
+                                        OnClick="() => CheckUvx()" 
+                                        Loading="@uvxStatus.Loading">
+                                    Check
+                                </Button>
+                            </div>
+                        }
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(uvxStatus.Message))
+                {
+                    <div style="margin-top: 8px; margin-left: 30px;">
+                        <Text Type="@(uvxStatus.Status == CheckStatus.Error ? TextElementType.Danger : TextElementType.Secondary)">
+                            @uvxStatus.Message
+                        </Text>
+                    </div>
+                }
+            </SpaceItem>
+        </Space>
+    </Card>
+</div>
+
+@if (showInstallationHelp)
+{
+    <div style="margin-bottom: 24px;">
+        <Card Title="Installation Help" Style="margin-bottom: 24px;">
+            <Collapse>
+                <Panel Header="Install Node.js and NPX" Key="1">
+                    <div>
+                        <Paragraph>
+                            <Text Strong>Windows:</Text>
+                        </Paragraph>
+                        <ul>
+                            <li>Download from <a href="https://nodejs.org/" target="_blank">nodejs.org</a></li>
+                            <li>Run the installer (NPX is included with Node.js)</li>
+                            <li>Restart your terminal/command prompt</li>
+                        </ul>
+                        
+                        <Paragraph>
+                            <Text Strong>macOS:</Text>
+                        </Paragraph>
+                        <ul>
+                            <li>Using Homebrew: <Text Code>brew install node</Text></li>
+                            <li>Or download from <a href="https://nodejs.org/" target="_blank">nodejs.org</a></li>
+                        </ul>
+                        
+                        <Paragraph>
+                            <Text Strong>Linux:</Text>
+                        </Paragraph>
+                        <ul>
+                            <li>Ubuntu/Debian: <Text Code>sudo apt install nodejs npm</Text></li>
+                            <li>Or use NodeSource repository for latest version</li>
+                        </ul>
+                        
+                        <Paragraph>
+                            <Text Strong>Note about NPX:</Text>
+                        </Paragraph>
+                        <ul>
+                            <li>NPX is included with Node.js installation (version 5.2.0 and later)</li>
+                            <li>It's a tool for executing Node.js packages without installing them globally</li>
+                            <li>Essential for running MCP servers like: <Text Code>npx @@modelcontextprotocol/server-filesystem</Text></li>
+                            <li>Verify installation with: <Text Code>npx --version</Text></li>
+                        </ul>
+                    </div>
+                </Panel>
+                
+                <Panel Header="Install .NET" Key="2">
+                    <div>
+                        <Paragraph>
+                            <Text Strong>Windows:</Text>
+                        </Paragraph>
+                        <ul>
+                            <li>Download from <a href="https://dotnet.microsoft.com/download" target="_blank">dotnet.microsoft.com/download</a></li>
+                            <li>Run the installer and follow the setup wizard</li>
+                            <li>Restart your terminal/command prompt</li>
+                        </ul>
+                        
+                        <Paragraph>
+                            <Text Strong>macOS:</Text>
+                        </Paragraph>
+                        <ul>
+                            <li>Using Homebrew: <Text Code>brew install dotnet</Text></li>
+                            <li>Or download from <a href="https://dotnet.microsoft.com/download" target="_blank">dotnet.microsoft.com/download</a></li>
+                        </ul>
+                        
+                        <Paragraph>
+                            <Text Strong>Linux:</Text>
+                        </Paragraph>
+                        <ul>
+                            <li>Ubuntu/Debian: <Text Code>sudo apt install dotnet-sdk-8.0</Text></li>
+                            <li>Or follow instructions at <a href="https://docs.microsoft.com/en-us/dotnet/core/install/linux" target="_blank">Microsoft Docs</a></li>
+                        </ul>
+                        
+                        <Paragraph>
+                            <Text Strong>Note about .NET:</Text>
+                        </Paragraph>
+                        <ul>
+                            <li>.NET is required for building and running .NET applications like MCP Aggregators</li>
+                            <li>Includes the .NET runtime and SDK for development</li>
+                            <li>Verify installation with: <Text Code>dotnet --version</Text></li>
+                        </ul>
+                        
+                        <Paragraph>
+                            <Text Strong>Note about DNX:</Text>
+                        </Paragraph>
+                        <ul>
+                            <li>DNX is a tool for running .NET applications without installing them globally</li>
+                            <li>Similar to NPX for Node.js, it allows running .NET tools on-demand</li>
+                            <li>Usage example: <Text Code>dnx Newtonsoft.Json</Text> or <Text Code>dnx PackageName@version</Text></li>
+                            <li>Check availability with: <Text Code>dnx --help</Text></li>
+                            <li>Part of the .NET SDK - available with recent .NET versions</li>
+                            <li>Reference: <a href="https://andrewlock.net/exploring-dotnet-10-preview-features-5-running-one-off-dotnet-tools-with-dnx/" target="_blank">Andrew Lock's DNX Guide</a></li>
+                        </ul>
+                    </div>
+                </Panel>
+                
+                <Panel Header="Install Python" Key="3">
+                    <div>
+                        <Paragraph>
+                            <Text Strong>Windows:</Text>
+                        </Paragraph>
+                        <ul>
+                            <li>Download from <a href="https://www.python.org/downloads/" target="_blank">python.org</a></li>
+                            <li>Make sure to check "Add Python to PATH" during installation</li>
+                        </ul>
+                        
+                        <Paragraph>
+                            <Text Strong>macOS:</Text>
+                        </Paragraph>
+                        <ul>
+                            <li>Using Homebrew: <Text Code>brew install python</Text></li>
+                            <li>Or download from <a href="https://www.python.org/downloads/" target="_blank">python.org</a></li>
+                        </ul>
+                        
+                        <Paragraph>
+                            <Text Strong>Linux:</Text>
+                        </Paragraph>
+                        <ul>
+                            <li>Usually pre-installed, or use: <Text Code>sudo apt install python3</Text></li>
+                        </ul>
+                    </div>
+                </Panel>
+                
+                <Panel Header="Install UV and UVX" Key="4">
+                    <div>
+                        <Paragraph>
+                            <Text Strong>Install UV:</Text>
+                        </Paragraph>
+                        <ul>
+                            <li>Windows: <Text Code>powershell -c "irm https://astral.sh/uv/install.ps1 | iex"</Text></li>
+                            <li>macOS/Linux: <Text Code>curl -LsSf https://astral.sh/uv/install.sh | sh</Text></li>
+                            <li>Or with pip: <Text Code>pip install uv</Text></li>
+                        </ul>
+                        
+                        <Paragraph>
+                            <Text Strong>Note about UVX:</Text>
+                        </Paragraph>
+                        <ul>
+                            <li>UVX is included with UV installation</li>
+                            <li>It's a tool for running Python applications in isolated environments</li>
+                            <li>Verify installation with: <Text Code>uvx --version</Text></li>
+                        </ul>
+                    </div>
+                </Panel>
+            </Collapse>
+        </Card>
+    </div>
+}

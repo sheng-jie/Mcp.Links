@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+  </PropertyGroup>
+
+  <ItemGroup>
+      <!-- copy mcp.json always-->
+    <None Update="mcp.json" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="/" /> 
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Mcp.Links\Mcp.Links.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Added core AntDesign package for components like Table/Card/Tag -->
+    <PackageReference Include="AntDesign" Version="1.4.0" />
+    <PackageReference Include="AntDesign.Charts" Version="0.6.6" />
+    <PackageReference Include="AntDesign.Extensions.Localization" Version="1.4.0" />
+    <PackageReference Include="AntDesign.ProLayout" Version="1.4.0" />
+    <PackageReference Include="System.Net.Http.Json" Version="9.0.8" />
+  </ItemGroup>
+
+</Project>

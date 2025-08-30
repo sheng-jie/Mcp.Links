@@ -1,0 +1,260 @@
+@namespace Mcp.Links.Http.Pages.Mcp
+
+@using System.ComponentModel
+@using AntDesign.TableModels
+@using AntDesign
+@using global::Mcp.Links.Configuration
+@using global::Mcp.Links.Http.Services
+@using Microsoft.Extensions.Options
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using System.Text.Encodings.Web
+@using System.ComponentModel.DataAnnotations
+
+@page "/mcp/clients"
+
+@inherits ClientListBase
+
+<PageHeader Class="site-page-header" Title="Client Apps" SubTitle="Management of MCP client applications">
+    <PageHeaderExtra>
+        <Space>
+            <SpaceItem>
+                <Button Type="ButtonType.Default" OnClick="RefreshClientList" Loading="@isRefreshing">
+                    <Icon Type="reload" Theme="IconThemeType.Outline" />
+                    Refresh
+                </Button>
+            </SpaceItem>
+            <SpaceItem>
+                <Button Type="ButtonType.Primary" OnClick="AddNewClientApp">
+                    <Icon Type="plus" Theme="IconThemeType.Outline" />
+                    Add New Client App
+                </Button>
+            </SpaceItem>
+        </Space>
+    </PageHeaderExtra>
+</PageHeader>
+
+<Table TItem="McpClientConfig" DataSource="@clientAppData" OnRowClick="OnRowClick" PageSize="10" @key="@clientAppDataKey">
+    <AntDesign.Column Title="App ID" TData="string" DataIndex="@nameof(McpClientConfig.AppId)">
+        <a>@context.AppId</a>
+    </AntDesign.Column>
+    <AntDesign.Column Title="Name" TData="string" DataIndex="@nameof(McpClientConfig.Name)">
+        <Text Strong>@context.Name</Text>
+        @if (!string.IsNullOrEmpty(context.Description))
+        {
+            <div style="color: #666; font-size: 12px; margin-top: 4px;">
+                @context.Description
+            </div>
+        }
+    </AntDesign.Column>
+    <AntDesign.Column Title="App Key" TData="string" DataIndex="@nameof(McpClientConfig.AppKey)">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <Text Code Style="font-size: 12px;">@MaskAppKey(context.AppKey)</Text>
+            <Tooltip Title="Copy App Key">
+                <Button Type="ButtonType.Text" Size="ButtonSize.Small" OnClick="() => CopyAppKey(context.AppKey)">
+                    <Icon Type="copy" Theme="IconThemeType.Outline" />
+                </Button>
+            </Tooltip>
+        </div>
+    </AntDesign.Column>
+    <AntDesign.Column Title="Associated Servers" TData="string[]" DataIndex="@nameof(McpClientConfig.McpServerIds)">
+        @if (context.McpServerIds?.Length > 0)
+        {
+            <div>
+                @foreach (var serverId in context.McpServerIds.Take(3))
+                {
+                    <Tag Color="TagColor.Blue" Style="margin-bottom: 4px;">@serverId</Tag>
+                }
+                @if (context.McpServerIds.Length > 3)
+                {
+                    <Tag Color="TagColor.Default">+@(context.McpServerIds.Length - 3) more</Tag>
+                }
+            </div>
+        }
+        else
+        {
+            <span class="ant-typography ant-typography-caption">No servers</span>
+        }
+    </AntDesign.Column>
+    <ActionColumn Title="Action">
+        @{
+            var isDeleteLoading = clientAppDeleteLoading.GetValueOrDefault(context.AppId, false);
+        }
+        <Space Size="SpaceSize.Middle">
+            <SpaceItem>
+                <Button Size="ButtonSize.Small" 
+                        OnClick="() => EditClientApp(context.AppId)"
+                        Disabled="@isDeleteLoading">
+                    <Icon Type="edit" Theme="IconThemeType.Outline" />
+                    Edit
+                </Button>
+            </SpaceItem>
+            <SpaceItem>
+                <Popconfirm Title="Are you sure you want to delete this client app?" 
+                           OnConfirm="() => DeleteClientApp(context.AppId)"
+                           OkText="Yes" 
+                           CancelText="No"
+                           Disabled="@isDeleteLoading">
+                    <Button Danger 
+                            Size="ButtonSize.Small"
+                            Loading="@isDeleteLoading"
+                            Disabled="@isDeleteLoading">
+                        <Icon Type="delete" Theme="IconThemeType.Outline" />
+                        @(isDeleteLoading ? "Deleting..." : "Delete")
+                    </Button>
+                </Popconfirm>
+            </SpaceItem>
+        </Space>
+    </ActionColumn>
+</Table>
+
+<Modal Title="Add New Client App"
+       Visible="@addClientAppModalVisible"
+       OnOk="HandleAddClientAppOk"
+       OnCancel="HandleAddClientAppCancel"
+       ConfirmLoading="@addClientAppLoading"
+       Width="800">
+    <Form Model="@newClientAppModel" 
+          LabelColSpan="6" 
+          WrapperColSpan="18"
+          OnFinish="OnAddClientAppFormFinish"
+          OnFinishFailed="OnAddClientAppFormFinishFailed"
+          @ref="addClientAppForm">
+        
+        <FormItem Label="App ID" Required>
+            <Input @bind-Value="@newClientAppModel.AppId" Placeholder="Enter unique app ID" />
+            <ValidationMessage For="@(() => newClientAppModel.AppId)" />
+        </FormItem>
+
+        <FormItem Label="App Key">
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <Input @bind-Value="@newClientAppModel.AppKey" Placeholder="Auto-generated app key" Disabled="true" Style="flex: 1;" />
+                <Button Type="ButtonType.Default" OnClick="GenerateNewAppKey">
+                    <Icon Type="reload" Theme="IconThemeType.Outline" />
+                    Generate
+                </Button>
+                <Tooltip Title="Copy App Key">
+                    <Button Type="ButtonType.Text" OnClick="() => CopyAppKey(newClientAppModel.AppKey)">
+                        <Icon Type="copy" Theme="IconThemeType.Outline" />
+                    </Button>
+                </Tooltip>
+            </div>
+            <Text Type="TextElementType.Secondary">App Key is auto-generated. Click generate to create a new one.</Text>
+        </FormItem>
+
+        <FormItem Label="Name" Required>
+            <Input @bind-Value="@newClientAppModel.Name" Placeholder="Enter client app name" />
+            <ValidationMessage For="@(() => newClientAppModel.Name)" />
+        </FormItem>
+
+        <FormItem Label="Description">
+            <TextArea @bind-Value="@newClientAppModel.Description" 
+                     Placeholder="Enter optional description" 
+                     Rows="3" />
+        </FormItem>
+
+        <FormItem Label="Associated MCP Servers">
+            <div>
+                @if (availableServers?.Length > 0)
+                {
+                    <div style="max-height: 200px; overflow-y: auto; border: 1px solid #d9d9d9; border-radius: 6px; padding: 8px;">
+                        @foreach (var server in availableServers)
+                        {
+                            <div style="padding: 4px 0;">
+                                <Checkbox Checked="@GetServerSelected(server.ServerId)"
+                                         CheckedChanged="@(value => OnServerSelectionChanged(server.ServerId, value))">
+                                    <span>@server.ServerId</span>
+                                    <Tag Color="@GetServerTypeColor(server.Type)" Style="margin-left: 8px;">@server.Type</Tag>
+                                </Checkbox>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div style="padding: 16px; text-align: center; color: #999;">
+                        <Icon Type="info-circle" Theme="IconThemeType.Outline" />
+                        No MCP servers available. <a href="/mcp/servers">Create a server first</a>.
+                    </div>
+                }
+            </div>
+        </FormItem>
+
+    </Form>
+</Modal>
+
+<Modal Title="Edit Client App"
+       Visible="@editClientAppModalVisible"
+       OnOk="HandleEditClientAppOk"
+       OnCancel="HandleEditClientAppCancel"
+       ConfirmLoading="@editClientAppLoading"
+       Width="800">
+    <Form Model="@editClientAppModel" 
+          LabelColSpan="6" 
+          WrapperColSpan="18"
+          OnFinish="OnEditClientAppFormFinish"
+          OnFinishFailed="OnEditClientAppFormFinishFailed"
+          @ref="editClientAppForm">
+        
+        <FormItem Label="App ID">
+            <Input @bind-Value="@editClientAppModel.AppId" Placeholder="App ID" Disabled="true" />
+            <Text Type="TextElementType.Secondary">App ID cannot be changed</Text>
+        </FormItem>
+
+        <FormItem Label="App Key" Required>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <Input @bind-Value="@editClientAppModel.AppKey" Placeholder="App key for authentication" Disabled="true" Style="flex: 1;" />
+                <Button Type="ButtonType.Default" OnClick="RegenerateAppKey">
+                    <Icon Type="reload" Theme="IconThemeType.Outline" />
+                    Regenerate
+                </Button>
+                <Tooltip Title="Copy App Key">
+                    <Button Type="ButtonType.Text" OnClick="() => CopyAppKey(editClientAppModel.AppKey)">
+                        <Icon Type="copy" Theme="IconThemeType.Outline" />
+                    </Button>
+                </Tooltip>
+            </div>
+            <Text Type="TextElementType.Secondary">App Key is auto-generated. Click regenerate to create a new one.</Text>
+            <ValidationMessage For="@(() => editClientAppModel.AppKey)" />
+        </FormItem>
+
+        <FormItem Label="Name" Required>
+            <Input @bind-Value="@editClientAppModel.Name" Placeholder="Enter client app name" />
+            <ValidationMessage For="@(() => editClientAppModel.Name)" />
+        </FormItem>
+
+        <FormItem Label="Description">
+            <TextArea @bind-Value="@editClientAppModel.Description" 
+                     Placeholder="Enter optional description" 
+                     Rows="3" />
+        </FormItem>
+
+        <FormItem Label="Associated MCP Servers">
+            <div>
+                @if (availableServers?.Length > 0)
+                {
+                    <div style="max-height: 200px; overflow-y: auto; border: 1px solid #d9d9d9; border-radius: 6px; padding: 8px;">
+                        @foreach (var server in availableServers)
+                        {
+                            <div style="padding: 4px 0;">
+                                <Checkbox Checked="@GetEditServerSelected(server.ServerId)"
+                                         CheckedChanged="@(value => OnEditServerSelectionChanged(server.ServerId, value))">
+                                    <span>@server.ServerId</span>
+                                    <Tag Color="@GetServerTypeColor(server.Type)" Style="margin-left: 8px;">@server.Type</Tag>
+                                </Checkbox>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div style="padding: 16px; text-align: center; color: #999;">
+                        <Icon Type="info-circle" Theme="IconThemeType.Outline" />
+                        No MCP servers available. <a href="/mcp/servers">Create a server first</a>.
+                    </div>
+                }
+            </div>
+        </FormItem>
+
+    </Form>
+</Modal>

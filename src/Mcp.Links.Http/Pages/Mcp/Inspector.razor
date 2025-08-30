@@ -1,0 +1,621 @@
+@namespace Mcp.Links.Http.Pages.Mcp
+
+@using System.ComponentModel
+@using AntDesign.TableModels
+@using AntDesign
+@using global::Mcp.Links.Http.Services
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using System.Text.Encodings.Web
+@using System.ComponentModel.DataAnnotations
+
+@page "/mcp/inspector"
+
+@inject IMcpInspectorService InspectorService
+@inject IMcpServerService McpServerService
+@inject IMessageService MessageService
+@inject IJSRuntime JSRuntime
+
+<PageHeader Class="site-page-header" Title="MCP Inspector" SubTitle="Test and debug Model Context Protocol servers">
+    <PageHeaderExtra>
+        <Space>
+            <SpaceItem>
+                <Select @bind-Value="@selectedServerId" 
+                        Placeholder="Select a server to inspect" 
+                        Style="width: 300px;"
+                        OnSelectedItemChanged="EventCallback.Factory.Create<string>(this, OnServerSelectionChanged)">
+                    <SelectOptions>
+                        @foreach (var server in availableServers)
+                        {
+                            <SelectOption Value="@server.ServerId" Label="@($"{server.ServerId} ({server.Type})")" />
+                        }
+                    </SelectOptions>
+                </Select>
+            </SpaceItem>
+            <SpaceItem>
+                <Button Type="ButtonType.Primary" 
+                        OnClick="TestConnection" 
+                        Loading="@isTestingConnection"
+                        Disabled="@(string.IsNullOrEmpty(selectedServerId))">
+                    <Icon Type="@(connectionTestResult?.IsConnected == true ? "check-circle" : "reload")" Theme="IconThemeType.Outline" />
+                    @(isTestingConnection ? "Testing..." : "Test Connection")
+                </Button>
+            </SpaceItem>
+        </Space>
+    </PageHeaderExtra>
+</PageHeader>
+
+@if (!string.IsNullOrEmpty(selectedServerId))
+{
+    <div style="margin-bottom: 16px;">
+        @if (connectionTestResult != null)
+        {
+            @if (connectionTestResult.IsConnected)
+            {
+                <Alert Type="AlertType.Success" 
+                       Message="Connection Successful" 
+                       Description="@($"Connected in {connectionTestResult.ConnectionTime.TotalMilliseconds:F0}ms")"
+                       ShowIcon="true" />
+            }
+            else
+            {
+                <Alert Type="AlertType.Error" 
+                       Message="Connection Failed" 
+                       Description="@connectionTestResult.ErrorMessage"
+                       ShowIcon="true" />
+            }
+        }
+    </div>
+
+    <Tabs @bind-ActiveKey="@activeTabKey" Type="TabType.Card" OnTabClick="OnTabChanged">
+        <TabPane Key="tools" Tab="Tools">
+            <div style="padding: 24px; background: white; border-radius: 6px;">
+                @if (isLoadingTools)
+                {
+                    <div style="text-align: center; padding: 40px;">
+                        <Spin Size="SpinSize.Large" />
+                        <div style="margin-top: 16px;">Loading tools...</div>
+                    </div>
+                }
+                else if (tools?.Length > 0)
+                {
+                    <div style="margin-bottom: 16px;">
+                        <Text Strong>Available Tools (@tools.Length)</Text>
+                    </div>
+                    
+                    <Table TItem="McpInspectorTool" DataSource="@tools" PageSize="10" Size="TableSize.Small">
+                        <AntDesign.Column Title="Tool Name" TData="string" DataIndex="@nameof(McpInspectorTool.Name)">
+                            <Text Strong>@context.Name</Text>
+                        </AntDesign.Column>
+                        <AntDesign.Column Title="Description" TData="string" DataIndex="@nameof(McpInspectorTool.Description)">
+                            @if (!string.IsNullOrEmpty(context.Description))
+                            {
+                                <Text>@context.Description</Text>
+                            }
+                            else
+                            {
+                                <span style="color: #999; font-style: italic;">No description available</span>
+                            }
+                        </AntDesign.Column>
+                        <AntDesign.Column Title="Parameters" TData="bool">
+                            @if (context.IsParameterless)
+                            {
+                                <Tag Color="TagColor.Default">No parameters</Tag>
+                            }
+                            else
+                            {
+                                <Tag Color="TagColor.Processing">Has parameters</Tag>
+                            }
+                        </AntDesign.Column>
+                        <ActionColumn Title="Action">
+                            <Space Size="SpaceSize.Small">
+                                <SpaceItem>
+                                    <Button Type="ButtonType.Primary" 
+                                            Size="ButtonSize.Small" 
+                                            OnClick="() => ShowToolDialog(context)">
+                                        <Icon Type="play-circle" Theme="IconThemeType.Outline" />
+                                        Test Tool
+                                    </Button>
+                                </SpaceItem>
+                                @if (!context.IsParameterless)
+                                {
+                                    <SpaceItem>
+                                        <Popover Title="Input Schema">
+                                            <ChildContent>
+                                                <Button Type="ButtonType.Default" Size="ButtonSize.Small">
+                                                    <Icon Type="info-circle" Theme="IconThemeType.Outline" />
+                                                    Schema
+                                                </Button>
+                                            </ChildContent>
+                                            <ContentTemplate>
+                                                <div style="max-width: 400px; max-height: 300px; overflow: auto;">
+                                                    <pre style="margin: 0; font-size: 12px; line-height: 1.4;">@JsonSerializer.Serialize(context.InputSchema, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping })</pre>
+                                                </div>
+                                            </ContentTemplate>
+                                        </Popover>
+                                    </SpaceItem>
+                                }
+                            </Space>
+                        </ActionColumn>
+                    </Table>
+                }
+                else
+                {
+                    <Empty>
+                        <ChildContent>
+                            <span>No tools available</span>
+                        </ChildContent>
+                    </Empty>
+                }
+            </div>
+        </TabPane>
+
+        <TabPane Key="resources" Tab="Resources">
+            <div style="padding: 24px; background: white; border-radius: 6px;">
+                @if (isLoadingResources)
+                {
+                    <div style="text-align: center; padding: 40px;">
+                        <Spin Size="SpinSize.Large" />
+                        <div style="margin-top: 16px;">Loading resources...</div>
+                    </div>
+                }
+                else if (resources?.Length > 0)
+                {
+                    <div style="margin-bottom: 16px;">
+                        <Text Strong>Available Resources (@resources.Length)</Text>
+                    </div>
+                    
+                    <Table TItem="McpInspectorResource" DataSource="@resources" PageSize="10" Size="TableSize.Small">
+                        <AntDesign.Column Title="Resource Name" TData="string" DataIndex="@nameof(McpInspectorResource.Name)">
+                            <Text Strong>@context.Name</Text>
+                        </AntDesign.Column>
+                        <AntDesign.Column Title="URI" TData="string" DataIndex="@nameof(McpInspectorResource.Uri)">
+                            <Text Code>@context.Uri</Text>
+                        </AntDesign.Column>
+                        <AntDesign.Column Title="Description" TData="string" DataIndex="@nameof(McpInspectorResource.Description)">
+                            @if (!string.IsNullOrEmpty(context.Description))
+                            {
+                                <Text>@context.Description</Text>
+                            }
+                            else
+                            {
+                                <span style="color: #999; font-style: italic;">No description available</span>
+                            }
+                        </AntDesign.Column>
+                        <AntDesign.Column Title="MIME Type" TData="string" DataIndex="@nameof(McpInspectorResource.MimeType)">
+                            @if (!string.IsNullOrEmpty(context.MimeType))
+                            {
+                                <Tag Color="TagColor.Default">@context.MimeType</Tag>
+                            }
+                            else
+                            {
+                                <span style="color: #999;">Unknown</span>
+                            }
+                        </AntDesign.Column>
+                        <ActionColumn Title="Action">
+                            <Button Type="ButtonType.Primary" 
+                                    Size="ButtonSize.Small" 
+                                    OnClick="() => ShowResourceDialog(context)">
+                                <Icon Type="eye" Theme="IconThemeType.Outline" />
+                                View Content
+                            </Button>
+                        </ActionColumn>
+                    </Table>
+                }
+                else
+                {
+                    <Empty>
+                        <ChildContent>
+                            <span>No resources available</span>
+                        </ChildContent>
+                    </Empty>
+                }
+            </div>
+        </TabPane>
+
+        <TabPane Key="prompts" Tab="Prompts">
+            <div style="padding: 24px; background: white; border-radius: 6px;">
+                @if (isLoadingPrompts)
+                {
+                    <div style="text-align: center; padding: 40px;">
+                        <Spin Size="SpinSize.Large" />
+                        <div style="margin-top: 16px;">Loading prompts...</div>
+                    </div>
+                }
+                else if (prompts?.Length > 0)
+                {
+                    <div style="margin-bottom: 16px;">
+                        <Text Strong>Available Prompts (@prompts.Length)</Text>
+                    </div>
+                    
+                    <Table TItem="McpInspectorPrompt" DataSource="@prompts" PageSize="10" Size="TableSize.Small">
+                        <AntDesign.Column Title="Prompt Name" TData="string" DataIndex="@nameof(McpInspectorPrompt.Name)">
+                            <Text Strong>@context.Name</Text>
+                        </AntDesign.Column>
+                        <AntDesign.Column Title="Description" TData="string" DataIndex="@nameof(McpInspectorPrompt.Description)">
+                            @if (!string.IsNullOrEmpty(context.Description))
+                            {
+                                <Text>@context.Description</Text>
+                            }
+                            else
+                            {
+                                <span style="color: #999; font-style: italic;">No description available</span>
+                            }
+                        </AntDesign.Column>
+                        <AntDesign.Column Title="Arguments" TData="bool">
+                            @if (context.HasArguments)
+                            {
+                                <div>
+                                    <Tag Color="TagColor.Processing">@context.Arguments?.Length arguments</Tag>
+                                    <Popover Title="Arguments Details" Placement="@AntDesign.Placement.Right">
+                                        <ChildContent>
+                                            <Button Type="ButtonType.Link" Size="ButtonSize.Small" Style="padding: 0; margin-left: 8px;">
+                                                <Icon Type="info-circle" Theme="IconThemeType.Outline" />
+                                                Details
+                                            </Button>
+                                        </ChildContent>
+                                        <ContentTemplate>
+                                            <div style="max-width: 400px; max-height: 300px; overflow: auto;">
+                                                @if (context.Arguments != null)
+                                                {
+                                                    <div style="margin-bottom: 12px;">
+                                                        <Text Strong>Available Arguments:</Text>
+                                                    </div>
+                                                    @foreach (var arg in context.Arguments)
+                                                    {
+                                                        <div style="margin-bottom: 8px; padding: 8px; background: #f6f6f6; border-radius: 4px;">
+                                                            <pre style="margin: 0; font-size: 12px; line-height: 1.4; white-space: pre-wrap;">@JsonSerializer.Serialize(arg, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping })</pre>
+                                                        </div>
+                                                    }
+                                                }
+                                            </div>
+                                        </ContentTemplate>
+                                    </Popover>
+                                </div>
+                            }
+                            else
+                            {
+                                <Tag Color="TagColor.Default">No arguments</Tag>
+                            }
+                        </AntDesign.Column>
+                        <ActionColumn Title="Action">
+                            <Button Type="ButtonType.Primary" 
+                                    Size="ButtonSize.Small" 
+                                    OnClick="() => ShowPromptDialog(context)">
+                                <Icon Type="play-circle" Theme="IconThemeType.Outline" />
+                                Test Prompt
+                            </Button>
+                        </ActionColumn>
+                    </Table>
+                }
+                else
+                {
+                    <Empty>
+                        <ChildContent>
+                            <span>No prompts available</span>
+                        </ChildContent>
+                    </Empty>
+                }
+            </div>
+        </TabPane>
+
+        <TabPane Key="export" Tab="Export">
+            <div style="padding: 24px; background: white; border-radius: 6px;">
+                <div style="margin-bottom: 24px;">
+                    <Text Strong>Export Server Configuration</Text>
+                    <div style="margin-top: 8px; color: #666;">
+                        Export server configurations for use in other MCP clients like Cursor, Claude Desktop, or other tools.
+                    </div>
+                </div>
+
+                <Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Large" Style="width: 100%;">
+                    <SpaceItem>
+                        <Card Title="Server Entry" Size="CardSize.Small">
+                            <ChildContent>
+                                <div style="margin-bottom: 16px;">
+                                    <Text>Export a single server configuration entry that can be added to your mcp.json file.</Text>
+                                </div>
+                                <Button Type="ButtonType.Primary" 
+                                        OnClick="ExportServerEntry" 
+                                        Loading="@isExportingEntry"
+                                        Disabled="@(string.IsNullOrEmpty(selectedServerId))">
+                                    <Icon Type="copy" Theme="IconThemeType.Outline" />
+                                    @(isExportingEntry ? "Copying..." : "Copy Server Entry")
+                                </Button>
+                            </ChildContent>
+                        </Card>
+                    </SpaceItem>
+                    
+                    <SpaceItem>
+                        <Card Title="Complete mcp.json File" Size="CardSize.Small">
+                            <ChildContent>
+                                <div style="margin-bottom: 16px;">
+                                    <Text>Export the complete mcp.json configuration file with all servers.</Text>
+                                </div>
+                                <Button Type="ButtonType.Primary" 
+                                        OnClick="ExportCompleteConfig" 
+                                        Loading="@isExportingComplete">
+                                    <Icon Type="download" Theme="IconThemeType.Outline" />
+                                    @(isExportingComplete ? "Copying..." : "Copy Complete Config")
+                                </Button>
+                            </ChildContent>
+                        </Card>
+                    </SpaceItem>
+                </Space>
+            </div>
+        </TabPane>
+    </Tabs>
+}
+else
+{
+    <div style="text-align: center; padding: 80px; background: white; border-radius: 6px;">
+        <Icon Type="server" Theme="IconThemeType.Outline" Style="font-size: 64px; color: #d9d9d9; margin-bottom: 16px;" />
+        <div style="font-size: 16px; margin-bottom: 8px;">Select a Server to Inspect</div>
+        <div style="color: #999;">Choose an MCP server from the dropdown above to start testing and debugging.</div>
+    </div>
+}
+
+<!-- Tool Test Modal -->
+<Modal Title="@($"Test Tool: {selectedTool?.Name}")"
+       Visible="@toolDialogVisible"
+       OnOk="CallTool"
+       OnCancel="() => toolDialogVisible = false"
+       ConfirmLoading="@isCallingTool"
+       Width="800">
+    @if (selectedTool != null)
+    {
+        <div style="margin-bottom: 24px;">
+            @if (!string.IsNullOrEmpty(selectedTool.Description))
+            {
+                <div style="margin-bottom: 16px;">
+                    <Text Strong>Description:</Text>
+                    <div style="margin-top: 4px;">@selectedTool.Description</div>
+                </div>
+            }
+            
+            @if (!selectedTool.IsParameterless)
+            {
+                <div style="margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <Text Strong>Parameters (JSON):</Text>
+                        <Button Type="ButtonType.Default" 
+                                Size="ButtonSize.Small" 
+                                OnClick="RegenerateToolExample">
+                            <Icon Type="reload" Theme="IconThemeType.Outline" />
+                            Generate Example
+                        </Button>
+                    </div>
+                    <div style="margin-top: 8px;">
+                        <TextArea @bind-Value="@toolParametersJson" 
+                                 Placeholder="Enter parameters as JSON, e.g., {&quot;param1&quot;: &quot;value1&quot;, &quot;param2&quot;: &quot;value2&quot;}" 
+                                 Rows="6" />
+                    </div>
+                    <div style="margin-top: 8px; color: #666; font-size: 12px;">
+                        💡 Tip: The JSON above was auto-generated from the tool's schema. Modify values as needed.
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (toolCallResult != null)
+        {
+            <div style="margin-top: 24px;">
+                <Text Strong>Result:</Text>
+                <div style="margin-top: 8px;">
+                    @if (toolCallResult.IsSuccess)
+                    {
+                        <Alert Type="AlertType.Success" 
+                               Message="@($"Tool executed successfully in {toolCallResult.ExecutionTime.TotalMilliseconds:F0}ms")" 
+                               ShowIcon="true" 
+                               Style="margin-bottom: 16px;" />
+                        
+                        @if (!string.IsNullOrEmpty(toolCallResult.RawResponse))
+                        {
+                            <div style="background: #f6f6f6; border: 1px solid #d9d9d9; border-radius: 6px; padding: 12px; max-height: 300px; overflow: auto;">
+                                <pre style="margin: 0; white-space: pre-wrap; word-wrap: break-word; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; font-size: 14px; line-height: 1.4;">@toolCallResult.RawResponse</pre>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <Alert Type="AlertType.Error" 
+                               Message="Tool execution failed" 
+                               Description="@toolCallResult.ErrorMessage"
+                               ShowIcon="true" />
+                    }
+                </div>
+            </div>
+        }
+    }
+</Modal>
+
+<!-- Resource View Modal -->
+<Modal Title="@($"Resource: {selectedResource?.Name}")"
+       Visible="@resourceDialogVisible"
+       OnCancel="() => resourceDialogVisible = false"
+       Footer="null"
+       Width="1000">
+    @if (selectedResource != null)
+    {
+        <div style="margin-bottom: 16px;">
+            <Space>
+                <SpaceItem>
+                    <Text Strong>URI:</Text> <Text Code>@selectedResource.Uri</Text>
+                </SpaceItem>
+                @if (!string.IsNullOrEmpty(selectedResource.MimeType))
+                {
+                    <SpaceItem>
+                        <Text Strong>MIME Type:</Text> <Tag>@selectedResource.MimeType</Tag>
+                    </SpaceItem>
+                }
+            </Space>
+        </div>
+
+        @if (!string.IsNullOrEmpty(selectedResource.Description))
+        {
+            <div style="margin-bottom: 16px;">
+                <Text Strong>Description:</Text>
+                <div style="margin-top: 4px;">@selectedResource.Description</div>
+            </div>
+        }
+
+        @if (isLoadingResourceContent)
+        {
+            <div style="text-align: center; padding: 40px;">
+                <Spin Size="SpinSize.Large" />
+                <div style="margin-top: 16px;">Loading resource content...</div>
+            </div>
+        }
+        else if (resourceContent != null)
+        {
+            <div style="margin-bottom: 16px;">
+                <Space>
+                    <SpaceItem>
+                        <Text Strong>Content:</Text>
+                    </SpaceItem>
+                    @if (resourceContent.Size.HasValue)
+                    {
+                        <SpaceItem>
+                            <Tag>@($"{resourceContent.Size.Value:N0} bytes")</Tag>
+                        </SpaceItem>
+                    }
+                    <SpaceItem>
+                        <Button Type="ButtonType.Default" 
+                                Size="ButtonSize.Small" 
+                                OnClick="CopyResourceContent"
+                                Loading="@isCopyingResource">
+                            <Icon Type="copy" Theme="IconThemeType.Outline" />
+                            @(isCopyingResource ? "Copying..." : "Copy")
+                        </Button>
+                    </SpaceItem>
+                </Space>
+            </div>
+            
+            <div style="background: #f6f6f6; border: 1px solid #d9d9d9; border-radius: 6px; padding: 12px; max-height: 400px; overflow: auto;">
+                <pre style="margin: 0; white-space: pre-wrap; word-wrap: break-word; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; font-size: 14px; line-height: 1.4;">@resourceContent.Content</pre>
+            </div>
+        }
+        else if (resourceContentError != null)
+        {
+            <Alert Type="AlertType.Error" 
+                   Message="Failed to load resource content" 
+                   Description="@resourceContentError"
+                   ShowIcon="true" />
+        }
+    }
+</Modal>
+
+<!-- Prompt Test Modal -->
+<Modal Title="@($"Test Prompt: {selectedPrompt?.Name}")"
+       Visible="@promptDialogVisible"
+       OnOk="GetPrompt"
+       OnCancel="() => promptDialogVisible = false"
+       ConfirmLoading="@isGettingPrompt"
+       Width="800">
+    @if (selectedPrompt != null)
+    {
+        <div style="margin-bottom: 24px;">
+            @if (!string.IsNullOrEmpty(selectedPrompt.Description))
+            {
+                <div style="margin-bottom: 16px;">
+                    <Text Strong>Description:</Text>
+                    <div style="margin-top: 4px;">@selectedPrompt.Description</div>
+                </div>
+            }
+            
+            @if (selectedPrompt.HasArguments)
+            {
+                <div style="margin-bottom: 16px;">
+                    <Text Strong>Arguments:</Text>
+                    @if (selectedPrompt.Arguments != null)
+                    {
+                        <div style="margin-top: 12px;">
+                            @foreach (var arg in selectedPrompt.Arguments)
+                            {
+                                var argInfo = GetArgumentInfo(arg);
+                                
+                                @if (!string.IsNullOrEmpty(argInfo.Name))
+                                {
+                                    <div style="margin-bottom: 16px; padding: 12px; border: 1px solid #d9d9d9; border-radius: 6px; background: #fafafa;">
+                                        <div style="margin-bottom: 8px;">
+                                            <Text Strong>@argInfo.Name</Text>
+                                            @if (argInfo.IsRequired)
+                                            {
+                                                <Tag Color="TagColor.Red" Style="margin-left: 8px;">Required</Tag>
+                                            }
+                                            @if (!string.IsNullOrEmpty(argInfo.Type))
+                                            {
+                                                <Tag Color="TagColor.Blue" Style="margin-left: 8px;">@argInfo.Type</Tag>
+                                            }
+                                        </div>
+                                        
+                                        @if (!string.IsNullOrEmpty(argInfo.Description))
+                                        {
+                                            <div style="margin-bottom: 8px; color: #666; font-size: 14px;">
+                                                @argInfo.Description
+                                            </div>
+                                        }
+                                        
+                                        @if (argInfo.Type?.ToLower() == "boolean")
+                                        {
+                                            <Switch Checked="@GetBooleanValue(argInfo.Name)" 
+                                                   CheckedChanged="@(value => UpdateBooleanArgumentValue(argInfo.Name, value))" />
+                                        }
+                                        else if (argInfo.Type?.ToLower() == "integer" || argInfo.Type?.ToLower() == "number")
+                                        {
+                                            <Input Value="@GetStringValue(argInfo.Name)" 
+                                                  ValueChanged="@((string value) => UpdateArgumentValue(argInfo.Name, value))"
+                                                  Type="InputType.Number"
+                                                  Style="width: 100%;" 
+                                                  Placeholder="@($"Enter {argInfo.Type}")" />
+                                        }
+                                        else
+                                        {
+                                            <Input Value="@GetStringValue(argInfo.Name)" 
+                                                  ValueChanged="@((string value) => UpdateArgumentValue(argInfo.Name, value))"
+                                                  Placeholder="@($"Enter {argInfo.Name}")" />
+                                        }
+                                    </div>
+                                }
+                            }
+                        </div>
+                        
+                        <div style="margin-top: 16px;">
+                            <Collapse>
+                                <Panel Header="Advanced: Edit as JSON" Key="json-edit">
+                                    <div style="margin-bottom: 8px;">
+                                        <Text>You can also edit the arguments as JSON directly:</Text>
+                                    </div>
+                                    <TextArea Value="@GetArgumentsAsJson()" 
+                                             ValueChanged="@(value => UpdateArgumentsFromJson(value))"
+                                             Placeholder="Enter arguments as JSON" 
+                                             Rows="4" />
+                                </Panel>
+                            </Collapse>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        @if (promptResult != null)
+        {
+            <div style="margin-top: 24px;">
+                <Text Strong>Prompt Messages:</Text>
+                <div style="margin-top: 8px;">
+                    <div style="background: #f6f6f6; border: 1px solid #d9d9d9; border-radius: 6px; padding: 12px; max-height: 300px; overflow: auto;">
+                        <pre style="margin: 0; white-space: pre-wrap; word-wrap: break-word; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; font-size: 14px; line-height: 1.4;">@JsonSerializer.Serialize(promptResult.Messages, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping })</pre>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (promptError != null)
+        {
+            <Alert Type="AlertType.Error" 
+                   Message="Failed to get prompt" 
+                   Description="@promptError"
+                   ShowIcon="true" />
+        }
+    }
+</Modal>

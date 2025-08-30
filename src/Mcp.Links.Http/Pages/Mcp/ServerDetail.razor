@@ -1,0 +1,388 @@
+@namespace Mcp.Links.Http.Pages.Mcp
+
+@using System.ComponentModel
+@using AntDesign.TableModels
+@using AntDesign
+@using global::Mcp.Links.Configuration
+@using global::Mcp.Links.Http.Services
+@using Microsoft.Extensions.Options
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using System.Text.Encodings.Web
+@using System.ComponentModel.DataAnnotations
+
+@page "/mcp/servers/{ServerId}"
+
+@inherits ServerDetailBase
+
+<PageHeader Class="site-page-header" 
+            Title="@($"MCP Server: {ServerId}")" 
+            SubTitle="Server details with tools, prompts, and resources"
+            OnBack="GoBack">
+    <PageHeaderExtra>
+        <Button Type="ButtonType.Default" OnClick="RefreshData">
+            <Icon Type="reload" Theme="IconThemeType.Outline" />
+            Refresh
+        </Button>
+    </PageHeaderExtra>
+</PageHeader>
+
+@if (loading)
+{
+    <div style="text-align: center; padding: 50px;">
+        <Spin Size="SpinSize.Large" />
+        <div style="margin-top: 16px;">Loading server details...</div>
+    </div>
+}
+else if (serverInfo == null)
+{
+    <Result Status="@ResultStatus.Http404"
+           Title="404"
+           SubTitle="Server not found">
+        <Extra>
+            <Button Type="ButtonType.Primary" OnClick="GoBack">
+                Back to Server List
+            </Button>
+        </Extra>
+    </Result>
+}
+else
+{
+    <div>
+        <!-- Server Information Card -->
+        <Card Title="Server Information" Size="CardSize.Small" Style="margin-bottom: 16px;">
+            <Body>
+                <Descriptions Bordered Column="2" Size="DescriptionsSize.Small">
+                    <DescriptionsItem Title="Server ID">
+                        <Text Strong>@serverInfo.ServerId</Text>
+                    </DescriptionsItem>
+                    <DescriptionsItem Title="Type">
+                        @{
+                            var typeColor = serverInfo.Type switch
+                            {
+                                "stdio" => TagColor.Blue,
+                                "sse" => TagColor.Green,
+                                "http" => TagColor.Orange,
+                                _ => TagColor.Default
+                            };
+                        }
+                        <Tag Color="@typeColor">@serverInfo.Type</Tag>
+                    </DescriptionsItem>
+                    <DescriptionsItem Title="Status">
+                        @if (serverInfo.Enabled)
+                        {
+                            <Tag Color="TagColor.Success">
+                                <Icon Type="check-circle" Theme="IconThemeType.Outline" />
+                                Enabled
+                            </Tag>
+                        }
+                        else
+                        {
+                            <Tag Color="TagColor.Error">
+                                <Icon Type="close-circle" Theme="IconThemeType.Outline" />
+                                Disabled
+                            </Tag>
+                        }
+                    </DescriptionsItem>
+                    <DescriptionsItem Title="Validation">
+                        @if (serverInfo.IsValid)
+                        {
+                            <Icon Type="check-circle" Theme="IconThemeType.TwoTone" TwoToneColor="#52c41a" />
+                            <Text>Valid</Text>
+                        }
+                        else
+                        {
+                            <Tooltip Title="@string.Join(", ", serverInfo.ValidationErrors)">
+                                <Icon Type="exclamation-circle" Theme="IconThemeType.TwoTone" TwoToneColor="#eb2f96" />
+                                <Text Type="TextElementType.Danger">Invalid</Text>
+                            </Tooltip>
+                        }
+                    </DescriptionsItem>
+                    @if (!string.IsNullOrEmpty(serverInfo.Command))
+                    {
+                        <DescriptionsItem Title="Command" Span="2">
+                            <Text Code>@serverInfo.Command</Text>
+                            @if (serverInfo.Args?.Length > 0)
+                            {
+                                <br />
+                                <strong>Args:</strong> <code>@string.Join(" ", serverInfo.Args)</code>
+                            }
+                        </DescriptionsItem>
+                    }
+                    @if (!string.IsNullOrEmpty(serverInfo.Url))
+                    {
+                        <DescriptionsItem Title="URL" Span="2">
+                            <Text Code>@serverInfo.Url</Text>
+                        </DescriptionsItem>
+                    }
+                    @if (serverInfo.Type == "stdio" && serverInfo.Environment?.Count > 0)
+                    {
+                        <DescriptionsItem Title="Environment Variables" Span="2">
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                @foreach (var envVar in serverInfo.Environment)
+                                {
+                                    <Tag Color="TagColor.Cyan" style="margin-bottom: 4px;">
+                                        <strong>@envVar.Key</strong>=@envVar.Value
+                                    </Tag>
+                                }
+                            </div>
+                        </DescriptionsItem>
+                    }
+                </Descriptions>
+            </Body>
+        </Card>
+
+        <!-- Server Details Collapse -->
+        <Collapse DefaultActiveKey="@(new[]{"tools"})" OnChange="OnCollapseChange" Animation>
+            <!-- Tools Panel -->
+            <Panel Key="tools">
+                <HeaderTemplate>
+                    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                        <span>
+                            <Icon Type="tool" Theme="IconThemeType.Outline" style="margin-right: 8px;" />
+                            Tools (@tools.Length)
+                        </span>
+                        <div style="margin-left: auto;">
+                            @if (loadingTools)
+                            {
+                                <Spin Size="SpinSize.Small" />
+                            }
+                            else
+                            {
+                                <Button Type="ButtonType.Text" Size="ButtonSize.Small" OnClick="RefreshTools">
+                                    <Icon Type="reload" Theme="IconThemeType.Outline" />
+                                    Refresh
+                                </Button>
+                            }
+                        </div>
+                    </div>
+                </HeaderTemplate>
+                <ChildContent>
+                    @if (loadingTools)
+                    {
+                        <div style="text-align: center; padding: 20px;">
+                            <Spin />
+                            <div style="margin-top: 8px;">Loading tools...</div>
+                        </div>
+                    }
+                    else if (tools.Length == 0)
+                    {
+                        <Empty>
+                            <ChildContent>
+                                <span>No tools available</span>
+                            </ChildContent>
+                        </Empty>
+                    }
+                    else
+                    {
+                        <Table TItem="McpToolInfo" DataSource="@tools" PageSize="10" Size="TableSize.Small">
+                            <AntDesign.Column Title="Name" TData="string" DataIndex="@nameof(McpToolInfo.Name)">
+                                <Text Strong>@context.Name</Text>
+                            </AntDesign.Column>
+                            <AntDesign.Column Title="Description" TData="string" DataIndex="@nameof(McpToolInfo.Description)">
+                                @if (!string.IsNullOrEmpty(context.Description))
+                                {
+                                    <Text>@context.Description</Text>
+                                }
+                                else
+                                {
+                                    <span style="color: #999; font-style: italic;">No description available</span>
+                                }
+                            </AntDesign.Column>
+                            <AntDesign.Column Title="Schema" TData="object" DataIndex="@nameof(McpToolInfo.InputSchema)">
+                                @if (context.InputSchema != null)
+                                {
+                                    <Popover Title="Input Schema">
+                                        <ChildContent>
+                                            <Button Type="ButtonType.Link" Size="ButtonSize.Small">
+                                                <Icon Type="eye" Theme="IconThemeType.Outline" />
+                                                View Schema
+                                            </Button>
+                                        </ChildContent>
+                                        <ContentTemplate>
+                                            <div style="max-width: 400px; max-height: 300px; overflow: auto;">
+                                                <Text Code style="white-space: pre-wrap;">@JsonSerializer.Serialize(context.InputSchema, new JsonSerializerOptions { WriteIndented = true })</Text>
+                                            </div>
+                                        </ContentTemplate>
+                                    </Popover>
+                                }
+                                else
+                                {
+                                    <span style="color: #999;">No schema</span>
+                                }
+                            </AntDesign.Column>
+                        </Table>
+                    }
+                </ChildContent>
+            </Panel>
+
+            <!-- Prompts Panel -->
+            <Panel Key="prompts">
+                <HeaderTemplate>
+                    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                        <span>
+                            <Icon Type="message" Theme="IconThemeType.Outline" style="margin-right: 8px;" />
+                            Prompts (@prompts.Length)
+                        </span>
+                        <div style="margin-left: auto;">
+                            @if (loadingPrompts)
+                            {
+                                <Spin Size="SpinSize.Small" />
+                            }
+                            else
+                            {
+                                <Button Type="ButtonType.Text" Size="ButtonSize.Small" OnClick="RefreshPrompts">
+                                    <Icon Type="reload" Theme="IconThemeType.Outline" />
+                                    Refresh
+                                </Button>
+                            }
+                        </div>
+                    </div>
+                </HeaderTemplate>
+                <ChildContent>
+                    @if (loadingPrompts)
+                    {
+                        <div style="text-align: center; padding: 20px;">
+                            <Spin />
+                            <div style="margin-top: 8px;">Loading prompts...</div>
+                        </div>
+                    }
+                    else if (prompts.Length == 0)
+                    {
+                        <Empty>
+                            <ChildContent>
+                                <span>No prompts available</span>
+                            </ChildContent>
+                        </Empty>
+                    }
+                    else
+                    {
+                        <Table TItem="McpPromptInfo" DataSource="@prompts" PageSize="10" Size="TableSize.Small">
+                            <AntDesign.Column Title="Name" TData="string" DataIndex="@nameof(McpPromptInfo.Name)">
+                                <Text Strong>@context.Name</Text>
+                            </AntDesign.Column>
+                            <AntDesign.Column Title="Description" TData="string" DataIndex="@nameof(McpPromptInfo.Description)">
+                                @if (!string.IsNullOrEmpty(context.Description))
+                                {
+                                    <Text>@context.Description</Text>
+                                }
+                                else
+                                {
+                                    <span style="color: #999; font-style: italic;">No description available</span>
+                                }
+                            </AntDesign.Column>
+                            <AntDesign.Column Title="Arguments" TData="object[]" DataIndex="@nameof(McpPromptInfo.Arguments)">
+                                @if (context.Arguments?.Length > 0)
+                                {
+                                    <Tag Color="TagColor.Processing">@context.Arguments.Length arguments</Tag>
+                                }
+                                else
+                                {
+                                    <span style="color: #999;">No arguments</span>
+                                }
+                            </AntDesign.Column>
+                        </Table>
+                    }
+                </ChildContent>
+            </Panel>
+
+            <!-- Resources Panel -->
+            <Panel Key="resources">
+                <HeaderTemplate>
+                    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                        <span>
+                            <Icon Type="folder" Theme="IconThemeType.Outline" style="margin-right: 8px;" />
+                            Resources (@resources.Length)
+                        </span>
+                        <div style="margin-left: auto;">
+                            @if (loadingResources)
+                            {
+                                <Spin Size="SpinSize.Small" />
+                            }
+                            else
+                            {
+                                <Button Type="ButtonType.Text" Size="ButtonSize.Small" OnClick="RefreshResources">
+                                    <Icon Type="reload" Theme="IconThemeType.Outline" />
+                                    Refresh
+                                </Button>
+                            }
+                        </div>
+                    </div>
+                </HeaderTemplate>
+                <ChildContent>
+                    @if (loadingResources)
+                    {
+                        <div style="text-align: center; padding: 20px;">
+                            <Spin />
+                            <div style="margin-top: 8px;">Loading resources...</div>
+                        </div>
+                    }
+                    else if (resources.Length == 0)
+                    {
+                        <Empty>
+                            <ChildContent>
+                                <span>No resources available</span>
+                            </ChildContent>
+                        </Empty>
+                    }
+                    else
+                    {
+                        <Table TItem="McpResourceInfo" DataSource="@resources" PageSize="10" Size="TableSize.Small">
+                            <AntDesign.Column Title="Name" TData="string" DataIndex="@nameof(McpResourceInfo.Name)">
+                                <Text Strong>@context.Name</Text>
+                            </AntDesign.Column>
+                            <AntDesign.Column Title="URI" TData="string" DataIndex="@nameof(McpResourceInfo.Uri)">
+                                <Text Code>@context.Uri</Text>
+                            </AntDesign.Column>
+                            <AntDesign.Column Title="Description" TData="string" DataIndex="@nameof(McpResourceInfo.Description)">
+                                @if (!string.IsNullOrEmpty(context.Description))
+                                {
+                                    <Text>@context.Description</Text>
+                                }
+                                else
+                                {
+                                    <span style="color: #999; font-style: italic;">No description available</span>
+                                }
+                            </AntDesign.Column>
+                            <AntDesign.Column Title="MIME Type" TData="string" DataIndex="@nameof(McpResourceInfo.MimeType)">
+                                @if (!string.IsNullOrEmpty(context.MimeType))
+                                {
+                                    <Tag Color="TagColor.Default">@context.MimeType</Tag>
+                                }
+                                else
+                                {
+                                    <span style="color: #999;">Unknown</span>
+                                }
+                            </AntDesign.Column>
+                        </Table>
+                    }
+                </ChildContent>
+            </Panel>
+
+            @if (serverInfo?.Type == "stdio" && serverInfo.Environment?.Count > 0)
+            {
+                <!-- Environment Variables Panel (only for stdio servers) -->
+                <Panel Key="environment">
+                    <HeaderTemplate>
+                        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                            <span>
+                                <Icon Type="setting" Theme="IconThemeType.Outline" style="margin-right: 8px;" />
+                                Environment Variables (@serverInfo.Environment.Count)
+                            </span>
+                        </div>
+                    </HeaderTemplate>
+                    <ChildContent>
+                        <Table TItem="KeyValuePair<string, string>" DataSource="@serverInfo.Environment.ToArray()" PageSize="10" Size="TableSize.Small">
+                            <AntDesign.Column Title="Variable" TData="string" DataIndex="@nameof(KeyValuePair<string, string>.Key)">
+                                <Text Strong Code>@context.Key</Text>
+                            </AntDesign.Column>
+                            <AntDesign.Column Title="Value" TData="string" DataIndex="@nameof(KeyValuePair<string, string>.Value)">
+                                <Text Code>@context.Value</Text>
+                            </AntDesign.Column>
+                        </Table>
+                    </ChildContent>
+                </Panel>
+            }
+        </Collapse>
+    </div>
+}

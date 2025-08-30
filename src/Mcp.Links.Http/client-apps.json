@@ -1,0 +1,13 @@
+{
+  "mcpClients": [
+    {
+      "appId": "default",
+      "appKey": "361e3e36afc24e32a29763ffb593485c",
+      "name": "default mcp client",
+      "description": null,
+      "mcpServerIds": [
+        "time"
+      ]
+    }
+  ]
+}

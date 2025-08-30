@@ -1,0 +1,7 @@
+<Solution>
+
+  <Folder Name="/src/">
+    <Project Path="src/Mcp.Links.Http/Mcp.Links.Http.csproj" />
+    <Project Path="src/Mcp.Links/Mcp.Links.csproj" />
+  </Folder>
+</Solution>

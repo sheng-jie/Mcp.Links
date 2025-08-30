@@ -1,0 +1,10 @@
+@namespace Mcp.Links.Http.Pages.Exception
+@page "/exception/500"
+
+<Result Status="@ResultStatus.Http500"
+        Title="500"
+        SubTitle="Sorry, something went wrong.">
+    <Extra>
+        <Button Type="@ButtonType.Primary">Back Home</Button>
+    </Extra>
+</Result>
