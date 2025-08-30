@@ -1,6 +1,7 @@
 using Mcp.Links.Configuration;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
+using System.Text.Encodings.Web;
 
 namespace Mcp.Links.Http.Services;
 
@@ -11,13 +12,15 @@ public class McpClientAppService : IMcpClientAppService
 {
     private readonly ILogger<McpClientAppService> _logger;
     private readonly IOptionsMonitor<McpClientConfigOptions> _clientConfigOptions;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly string _clientAppsFilePath;
     private readonly JsonSerializerOptions _jsonOptions;
 
-    public McpClientAppService(ILogger<McpClientAppService> logger, IOptionsMonitor<McpClientConfigOptions> clientConfigOptions)
+    public McpClientAppService(ILogger<McpClientAppService> logger, IOptionsMonitor<McpClientConfigOptions> clientConfigOptions, IHttpContextAccessor httpContextAccessor)
     {
         _logger = logger;
         _clientConfigOptions = clientConfigOptions;
+        _httpContextAccessor = httpContextAccessor;
         
         // Use a client-apps.json file in the same directory as the main app
         _clientAppsFilePath = Path.Combine(AppContext.BaseDirectory, "client-apps.json");
@@ -164,6 +167,69 @@ public class McpClientAppService : IMcpClientAppService
             errors.Add("MCP Server IDs cannot be null");
 
         return errors;
+    }
+
+    public async Task<string> GenerateClientConfigurationAsync(string appId, string serverId)
+    {
+        try
+        {
+            _logger.LogInformation("Generating client configuration for app '{AppId}' and server '{ServerId}'", appId, serverId);
+
+            // Get the client app
+            var clientApp = await GetClientAppAsync(appId);
+            if (clientApp == null)
+            {
+                throw new ArgumentException($"Client app with ID '{appId}' not found");
+            }
+
+            // Check if the server is associated with this client app
+            if (clientApp.McpServerIds == null || !clientApp.McpServerIds.Contains(serverId))
+            {
+                throw new ArgumentException($"Server '{serverId}' is not associated with client app '{appId}'");
+            }
+
+            // Get the current request URL to build the proper MCP endpoint
+            var request = _httpContextAccessor.HttpContext?.Request;
+            var baseUrl = request != null 
+                ? $"{request.Scheme}://{request.Host}" 
+                : "http://localhost:5146"; // Fallback for non-HTTP contexts
+
+            // Create the configuration entry for aggregated MCP server
+            // All clients use the same "mcp-links" configuration with different App ID and App Key
+            var configuration = new
+            {
+                mcpServers = new Dictionary<string, object>
+                {
+                    ["mcp-links"] = new
+                    {
+                        url = $"{baseUrl}/mcp",
+                        type = "http",
+                        headers = new Dictionary<string, string>
+                        {
+                            ["X-AppId"] = appId,
+                            ["X-AppKey"] = clientApp.AppKey
+                        }
+                    }
+                }
+            };
+
+            var jsonOptions = new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
+
+            var configJson = JsonSerializer.Serialize(configuration, jsonOptions);
+            
+            _logger.LogDebug("Generated client configuration for app '{AppId}' and server '{ServerId}'", appId, serverId);
+            return configJson;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to generate client configuration for app '{AppId}' and server '{ServerId}'", appId, serverId);
+            throw;
+        }
     }
 
     private async Task SaveClientAppsAsync(McpClientConfig[] clientApps)

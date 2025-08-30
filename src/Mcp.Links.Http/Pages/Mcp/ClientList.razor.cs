@@ -64,6 +64,14 @@ public partial class ClientListBase : ComponentBase
     // Delete client app loading states
     protected readonly Dictionary<string, bool> clientAppDeleteLoading = new();
     
+    // Configuration modal state
+    protected bool configurationModalVisible = false;
+    protected bool loadingConfiguration = false;
+    protected bool copyConfigLoading = false;
+    protected string configurationContent = "";
+    protected string selectedConfigAppId = "";
+    protected string selectedConfigServerId = "";
+    
     // Refresh state
     protected bool isRefreshing = false;
 
@@ -117,6 +125,34 @@ public partial class ClientListBase : ComponentBase
     {
         // TODO: Navigate to client app details page when created
         MessageService.Info($"Client app details for '{appId}' - Feature coming soon!");
+    }
+
+    protected async Task ViewClientConfiguration(string appId, string serverId)
+    {
+        try
+        {
+            selectedConfigAppId = appId;
+            selectedConfigServerId = serverId;
+            configurationModalVisible = true;
+            loadingConfiguration = true;
+            configurationContent = "";
+            StateHasChanged();
+
+            // Generate the configuration
+            configurationContent = await McpClientAppService.GenerateClientConfigurationAsync(appId, serverId);
+            
+            MessageService.Success("Configuration generated successfully.");
+        }
+        catch (System.Exception ex)
+        {
+            MessageService.Error($"Failed to generate configuration: {ex.Message}");
+            configurationContent = "Error generating configuration";
+        }
+        finally
+        {
+            loadingConfiguration = false;
+            StateHasChanged();
+        }
     }
 
     protected void AddNewClientApp()
@@ -415,6 +451,38 @@ public partial class ClientListBase : ComponentBase
         }
         
         editSelectedServerIds = currentList.ToArray();
+    }
+
+    protected void HandleConfigurationCancel()
+    {
+        configurationModalVisible = false;
+    }
+
+    protected async Task CopyConfigurationToClipboard()
+    {
+        if (string.IsNullOrEmpty(configurationContent))
+        {
+            MessageService.Warning("No configuration to copy.");
+            return;
+        }
+
+        copyConfigLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", configurationContent);
+            MessageService.Success("Configuration copied to clipboard successfully!");
+        }
+        catch (System.Exception)
+        {
+            MessageService.Warning("Unable to copy to clipboard. Please copy manually.");
+        }
+        finally
+        {
+            copyConfigLoading = false;
+            StateHasChanged();
+        }
     }
 
     public class AddClientAppModel

@@ -62,4 +62,12 @@ public interface IMcpClientAppService
     /// <param name="clientApp">The client app configuration to validate.</param>
     /// <returns>Collection of validation error messages.</returns>
     IEnumerable<string> GetValidationErrors(McpClientConfig clientApp);
+
+    /// <summary>
+    /// Generates a client configuration entry for the specified app and server.
+    /// </summary>
+    /// <param name="appId">The app ID to generate configuration for.</param>
+    /// <param name="serverId">The server ID to generate configuration for.</param>
+    /// <returns>JSON configuration string for MCP client.</returns>
+    Task<string> GenerateClientConfigurationAsync(string appId, string serverId);
 }
