@@ -66,7 +66,7 @@ public sealed class McpToolsHandler
                 return clientTools.Select(tool =>
                 {
                     var protocolTool = tool.ProtocolTool;
-                    protocolTool.Name = $"{clientWrapper.Name}.{protocolTool.Name}";
+                    protocolTool.Name = $"{clientWrapper.Name}-{protocolTool.Name}";
                     return protocolTool;
                 });
             })
@@ -82,10 +82,10 @@ public sealed class McpToolsHandler
     {
         var clientWrappers = await _mcpClientsFactory.GetOrCreateClientsAsync(cancellation).ConfigureAwait(false);
 
-        var splitToolNames = request.Params?.Name.Split('.');
+        var splitToolNames = request.Params?.Name.Split('-');
         if (splitToolNames == null || splitToolNames.Length != 2)
         {
-            throw new ArgumentException("Tool name must be in the format 'ClientName.ToolName'.", nameof(request));
+            throw new ArgumentException("Tool name must be in the format 'ClientName-ToolName'.", nameof(request));
         }
 
         var targetClientName = splitToolNames[0];
