@@ -1,41 +1,200 @@
 ﻿@page "/"
 
-<PageContainer Title="Welcome">
-    <Card>
-        <Alert
-            Message="AntDesign.Templates have been published to nuget, you can download and use them directly."
-            Type="@AlertType.Success"
-            ShowIcon="true"
-            Banner
-            Style="margin: -12px; margin-bottom: 24px"/>
-        <Text Strong>
-            <a target="_blank" rel="noopener noreferrer" href="https://www.nuget.org/packages/AntDesign.Templates">
-                Use .NET CLI to install the latest template quickly.
-            </a>
-        </Text>
-        <pre class="pre"><code><Text Copyable> dotnet new --install AntDesign.Templates::0.1.0-*</Text></code></pre>
-        <Text
-            Strong
-            Style="margin-bottom: 12px">
-            <a target="_blank" rel="noopener noreferrer" href="https://github.com/ant-design-blazor/ant-design-pro-blazor">
-               Create an empty server-side Blazor project.
-            </a>
-        </Text>
-        <pre class="pre"><code><Text Copyable> dotnet new antdesign --host=server</Text></code></pre>
-        <Text
-            Strong
-            Style="margin-bottom: 12px">
-            <a target="_blank" rel="noopener noreferrer" href="https://github.com/ant-design-blazor/ant-design-pro-blazor">
-                Create an empty server-side Blazor project with all pages.
-            </a>
-        </Text>
-        <pre class="pre"><code><Text Copyable> dotnet new antdesign --host=server --full</Text></code></pre>
-    </Card>
-    <p style="text-align: center; margin-top: 24px;">
-        Want to add more pages? Please refer to
-        <a href="https://github.com/ant-design-blazor/ant-design-pro-blazor" target="_blank" rel="noopener noreferrer">
-            ant-design-pro-blazor project
-        </a>
-        .
-    </p>
-</PageContainer>
+<PageHeader Title="Welcome to MCP Links" 
+            SubTitle="Model Context Protocol Server Management Platform">
+</PageHeader>
+
+<div style="padding: 24px;">
+    @if (isLoading)
+    {
+        <div style="text-align: center; padding: 60px;">
+            <Spin Size="SpinSize.Large" />
+            <div style="margin-top: 16px; color: #666;">Loading dashboard...</div>
+        </div>
+    }
+    else
+    {
+        <!-- Hero Section -->
+        <Card Style="margin-bottom: 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+            <div style="padding: 48px 32px; color: white;">
+                <Title Level="1" Style="color: white; margin-bottom: 16px;">
+                    <Icon Type="api" Theme="IconThemeType.TwoTone" Style="margin-right: 12px;" />
+                    MCP Links
+                </Title>
+                <Paragraph Style="font-size: 16px; color: rgba(255,255,255,0.9); margin-bottom: 32px; max-width: 600px;">
+                    A powerful platform for managing and integrating multiple Model Context Protocol (MCP) servers. 
+                    Streamline your AI tool interactions with centralized server management, real-time monitoring, and easy configuration.
+                </Paragraph>
+                <Space Size="SpaceSize.Large">
+                    <SpaceItem>
+                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" OnClick="NavigateToServers">
+                            <Icon Type="setting" Theme="IconThemeType.Outline" />
+                            Manage Servers
+                        </Button>
+                    </SpaceItem>
+                    <SpaceItem>
+                        <Button Type="ButtonType.Default" Size="ButtonSize.Large" OnClick="NavigateToInspector">
+                            <Icon Type="experiment" Theme="IconThemeType.Outline" />
+                            Test Tools
+                        </Button>
+                    </SpaceItem>
+                </Space>
+                <div style="margin-top: 24px;">
+                    <Text Style="color: rgba(255,255,255,0.8);">
+                        Active Servers: <Text Strong Style="color: white;">@stats.EnabledServers</Text> / @stats.TotalServers
+                    </Text>
+                </div>
+            </div>
+        </Card>
+
+        <!-- Statistics Cards -->
+        <div class="stats-grid" style="margin-bottom: 32px;">
+            <Card>
+                <Statistic Title="Total Servers" Value="@stats.TotalServers">
+                    <PrefixTemplate>
+                        <Icon Type="server" Theme="IconThemeType.Outline" Style="color: #1890ff;" />
+                    </PrefixTemplate>
+                </Statistic>
+            </Card>
+            <Card>
+                <Statistic Title="Connected Servers" Value="@stats.ConnectedServers">
+                    <PrefixTemplate>
+                        <Icon Type="check-circle" Theme="IconThemeType.Outline" Style="color: #52c41a;" />
+                    </PrefixTemplate>
+                </Statistic>
+            </Card>
+            <Card>
+                <Statistic Title="Available Tools" Value="@stats.AvailableTools">
+                    <PrefixTemplate>
+                        <Icon Type="tool" Theme="IconThemeType.Outline" Style="color: #fa8c16;" />
+                    </PrefixTemplate>
+                </Statistic>
+            </Card>
+            <Card>
+                <Statistic Title="Resources" Value="@stats.AvailableResources">
+                    <PrefixTemplate>
+                        <Icon Type="database" Theme="IconThemeType.Outline" Style="color: #722ed1;" />
+                    </PrefixTemplate>
+                </Statistic>
+            </Card>
+        </div>
+
+        <!-- Quick Actions -->
+        <Title Level="3" Style="margin-bottom: 24px;">Quick Actions</Title>
+        <div class="quick-actions-grid" style="margin-bottom: 32px;">
+            <Card Hoverable Style="cursor: pointer;">
+                <div class="quick-action-item" @onclick="NavigateToEnvCheck">
+                    <Icon Type="safety-certificate" Theme="IconThemeType.TwoTone" Style="font-size: 48px; margin-bottom: 16px;" />
+                    <Title Level="4">Environment Check</Title>
+                    <Paragraph Style="color: #666;">
+                        Verify your system environment and check for any configuration issues.
+                    </Paragraph>
+                </div>
+            </Card>
+            <Card Hoverable Style="cursor: pointer;">
+                <div class="quick-action-item" @onclick="NavigateToServers">
+                    <Icon Type="setting" Theme="IconThemeType.TwoTone" Style="font-size: 48px; margin-bottom: 16px;" />
+                    <Title Level="4">Server Management</Title>
+                    <Paragraph Style="color: #666;">
+                        Configure, enable, and monitor your MCP servers. Add new servers or modify existing ones.
+                    </Paragraph>
+                </div>
+            </Card>
+            <Card Hoverable Style="cursor: pointer;">
+                <div class="quick-action-item" @onclick="NavigateToInspector">
+                    <Icon Type="experiment" Theme="IconThemeType.TwoTone" Style="font-size: 48px; margin-bottom: 16px;" />
+                    <Title Level="4">Tool Inspector</Title>
+                    <Paragraph Style="color: #666;">
+                        Test and debug tools, resources, and prompts from your connected MCP servers.
+                    </Paragraph>
+                </div>
+            </Card>
+            <Card Hoverable Style="cursor: pointer;">
+                <div class="quick-action-item" @onclick="NavigateToClientApps">
+                    <Icon Type="appstore" Theme="IconThemeType.TwoTone" Style="font-size: 48px; margin-bottom: 16px;" />
+                    <Title Level="4">Client Apps</Title>
+                    <Paragraph Style="color: #666;">
+                        Manage client applications and their configurations for different use cases.
+                    </Paragraph>
+                </div>
+            </Card>
+        </div>
+
+        <!-- Recent Activity Section -->
+        <div class="activity-grid" style="margin-bottom: 32px;">
+            <Card Title="Recent Activity">
+                @if (recentActivities.Any())
+                {
+                    <Timeline>
+                        @foreach (var activity in recentActivities.Take(5))
+                        {
+                            <TimelineItem>
+                                <Icon Type="check-circle" Theme="IconThemeType.Outline" Style="color: #52c41a;" />
+                                @activity
+                            </TimelineItem>
+                        }
+                    </Timeline>
+                }
+                else
+                {
+                    <Empty Description="@("No recent activity")">
+                        <ChildContent>
+                            <Button Type="ButtonType.Primary" OnClick="NavigateToServers">
+                                Add Your First Server
+                            </Button>
+                        </ChildContent>
+                    </Empty>
+                }
+            </Card>
+            
+            <Card Title="Getting Started">
+                <Steps Direction="StepsDirection.Vertical" Size="StepsSize.Small" Current="0">
+                    <Step Title="Configure Servers" Description="Add and configure your MCP servers" />
+                    <Step Title="Test Connections" Description="Verify server connectivity and tools" />
+                    <Step Title="Set Up Client Apps" Description="Configure client applications" />
+                    <Step Title="Start Using Tools" Description="Begin using MCP tools in your workflow" />
+                </Steps>
+                <div style="margin-top: 24px;">
+                    <Space>
+                        <SpaceItem>
+                            <Button Type="ButtonType.Link" Icon="github" OnClick="NavigateToGitHub">
+                                GitHub Repository
+                            </Button>
+                        </SpaceItem>
+                        <SpaceItem>
+                            <Button Type="ButtonType.Link" Icon="question-circle" OnClick="NavigateToEnvCheck">
+                                Documentation
+                            </Button>
+                        </SpaceItem>
+                    </Space>
+                </div>
+            </Card>
+        </div>
+
+        <!-- Features Section -->
+        <Title Level="3" Style="margin-bottom: 24px;">Key Features</Title>
+        <div class="features-grid">
+            <Card>
+                <div class="feature-item">
+                    <Icon Type="api" Theme="IconThemeType.TwoTone" Style="font-size: 36px; margin-bottom: 16px;" />
+                    <Title Level="5">Multi-Protocol Support</Title>
+                    <Paragraph>Support for stdio, SSE, and HTTP MCP server types with seamless integration.</Paragraph>
+                </div>
+            </Card>
+            <Card>
+                <div class="feature-item">
+                    <Icon Type="dashboard" Theme="IconThemeType.TwoTone" Style="font-size: 36px; margin-bottom: 16px;" />
+                    <Title Level="5">Real-time Monitoring</Title>
+                    <Paragraph>Monitor server status, tool availability, and system health in real-time.</Paragraph>
+                </div>
+            </Card>
+            <Card>
+                <div class="feature-item">
+                    <Icon Type="box-plot" Theme="IconThemeType.TwoTone" Style="font-size: 36px; margin-bottom: 16px;" />
+                    <Title Level="5">Easy Integration</Title>
+                    <Paragraph>Simple configuration and export options for popular MCP clients like Cursor and Claude.</Paragraph>
+                </div>
+            </Card>
+        </div>
+    }
+</div>

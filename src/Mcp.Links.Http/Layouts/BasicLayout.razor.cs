@@ -18,7 +18,7 @@ namespace Mcp.Links.Http.Layouts
                 new MenuDataItem
                 {
                     Path = "/",
-                    Name = "welcome",
+                    Name = "Welcome",
                     Key = "welcome",
                     Icon = "smile",
                 },

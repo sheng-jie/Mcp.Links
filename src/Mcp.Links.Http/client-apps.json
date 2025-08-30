@@ -8,6 +8,28 @@
       "mcpServerIds": [
         "time"
       ]
+    },
+    {
+      "appId": "vscode",
+      "appKey": "791c318d841d445d83b598b82222f04f",
+      "name": "VS Code",
+      "description": null,
+      "mcpServerIds": [
+        "csharp-code-interceptor",
+        "fetch",
+        "spec-coding"
+      ]
+    },
+    {
+      "appId": "cursor",
+      "appKey": "f1baa4a7f7ad483dad2730abffdcd2c7",
+      "name": "Cursor",
+      "description": null,
+      "mcpServerIds": [
+        "csharp-code-interceptor",
+        "fetch",
+        "spec-coding"
+      ]
     }
   ]
 }
