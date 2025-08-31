@@ -50,30 +50,30 @@
         <!-- Statistics Cards -->
         <div class="stats-grid" style="margin-bottom: 32px;">
             <Card>
-                <Statistic Title="Total Servers" Value="@stats.TotalServers">
+                <Statistic Title="Store Servers" Value="@stats.StoreServers">
                     <PrefixTemplate>
-                        <Icon Type="server" Theme="IconThemeType.Outline" Style="color: #1890ff;" />
+                        <Icon Type="shop" Theme="IconThemeType.Outline" Style="color: #1890ff;" />
+                    </PrefixTemplate>
+                </Statistic>
+            </Card>
+            <Card>
+                <Statistic Title="Installed Servers" Value="@stats.InstalledServers">
+                    <PrefixTemplate>
+                        <Icon Type="download" Theme="IconThemeType.Outline" Style="color: #52c41a;" />
                     </PrefixTemplate>
                 </Statistic>
             </Card>
             <Card>
                 <Statistic Title="Connected Servers" Value="@stats.ConnectedServers">
                     <PrefixTemplate>
-                        <Icon Type="check-circle" Theme="IconThemeType.Outline" Style="color: #52c41a;" />
+                        <Icon Type="api" Theme="IconThemeType.Outline" Style="color: #fa8c16;" />
                     </PrefixTemplate>
                 </Statistic>
             </Card>
             <Card>
-                <Statistic Title="Available Tools" Value="@stats.AvailableTools">
+                <Statistic Title="Client Apps" Value="@stats.ClientApps">
                     <PrefixTemplate>
-                        <Icon Type="tool" Theme="IconThemeType.Outline" Style="color: #fa8c16;" />
-                    </PrefixTemplate>
-                </Statistic>
-            </Card>
-            <Card>
-                <Statistic Title="Resources" Value="@stats.AvailableResources">
-                    <PrefixTemplate>
-                        <Icon Type="database" Theme="IconThemeType.Outline" Style="color: #722ed1;" />
+                        <Icon Type="appstore" Theme="IconThemeType.Outline" Style="color: #722ed1;" />
                     </PrefixTemplate>
                 </Statistic>
             </Card>

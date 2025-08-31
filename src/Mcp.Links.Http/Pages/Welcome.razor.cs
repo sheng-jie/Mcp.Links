@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Mcp.Links.Http.Services;
 using Mcp.Links.Configuration;
+using System.Text.Json;
 
 namespace Mcp.Links.Http.Pages;
 
@@ -8,6 +9,7 @@ public partial class Welcome
 {
     [Inject] private IMcpServerService McpServerService { get; set; } = default!;
     [Inject] private IMcpClientAppService McpClientAppService { get; set; } = default!;
+    [Inject] private IMcpStoreService McpStoreService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
     private DashboardStats stats = new();
@@ -28,13 +30,17 @@ public partial class Welcome
             // Load server configurations
             var servers = await McpServerService.GetAllServersAsync();
             var clientApps = await McpClientAppService.GetAllClientAppsAsync();
+            var storeServers = await McpStoreService.GetAllStoreServersAsync();
 
             stats = new DashboardStats
             {
+                StoreServers = storeServers.Count,
+                InstalledServers = servers.Length,
+                ConnectedServers = servers.Count(s => s.Enabled && s.IsValid),
+                ClientApps = clientApps.Length,
                 TotalServers = servers.Length,
                 EnabledServers = servers.Count(s => s.Enabled),
                 TotalClientApps = clientApps.Length,
-                ConnectedServers = servers.Count(s => s.Enabled && s.IsValid),
                 AvailableTools = await GetTotalToolsCount(servers),
                 AvailableResources = await GetTotalResourcesCount(servers)
             };
@@ -160,10 +166,13 @@ public partial class Welcome
 
     public class DashboardStats
     {
+        public int StoreServers { get; set; }
+        public int InstalledServers { get; set; }
+        public int ConnectedServers { get; set; }
+        public int ClientApps { get; set; }
         public int TotalServers { get; set; }
         public int EnabledServers { get; set; }
         public int TotalClientApps { get; set; }
-        public int ConnectedServers { get; set; }
         public int AvailableTools { get; set; }
         public int AvailableResources { get; set; }
     }

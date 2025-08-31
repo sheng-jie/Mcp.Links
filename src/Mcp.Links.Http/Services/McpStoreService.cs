@@ -11,16 +11,18 @@ public class McpStoreService : IMcpStoreService
 {
     private readonly IMcpServerService _mcpServerService;
     private readonly ILogger<McpStoreService> _logger;
+    private readonly IWebHostEnvironment _webHostEnvironment;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true
     };
 
-    public McpStoreService(IMcpServerService mcpServerService, ILogger<McpStoreService> logger)
+    public McpStoreService(IMcpServerService mcpServerService, ILogger<McpStoreService> logger, IWebHostEnvironment webHostEnvironment)
     {
         _mcpServerService = mcpServerService;
         _logger = logger;
+        _webHostEnvironment = webHostEnvironment;
     }
 
     public async Task<McpStoreInstallationInfo> ParseInstallationInfoAsync(McpStoreItem storeItem)
@@ -319,6 +321,49 @@ public class McpStoreService : IMcpStoreService
         }
 
         return serverId;
+    }
+
+    public async Task<List<McpStoreItem>> GetAllStoreServersAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Loading all store servers");
+
+            var storeFilePath = Path.Combine(_webHostEnvironment.ContentRootPath, "mcp-store.json");
+            
+            if (!File.Exists(storeFilePath))
+            {
+                _logger.LogWarning("Store file not found: {FilePath}", storeFilePath);
+                return new List<McpStoreItem>();
+            }
+
+            var json = await File.ReadAllTextAsync(storeFilePath);
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return new List<McpStoreItem>();
+            }
+
+            var items = JsonSerializer.Deserialize<List<McpStoreItem>>(json);
+            
+            if (items != null)
+            {
+                // Filter out invalid items and the last item which seems to be a count
+                var validItems = items.Where(item => 
+                    !string.IsNullOrEmpty(item.Title) && 
+                    item.Title != "4 results found" &&
+                    !string.IsNullOrEmpty(item.Address)).ToList();
+                
+                _logger.LogInformation("Loaded {Count} valid store servers", validItems.Count);
+                return validItems;
+            }
+            
+            return new List<McpStoreItem>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading store servers");
+            return new List<McpStoreItem>();
+        }
     }
 
     private static string GenerateBaseServerId(string title)

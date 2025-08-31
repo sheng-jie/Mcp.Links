@@ -34,7 +34,8 @@
     </PageHeaderExtra>
 </PageHeader>
 
-<Table TItem="McpClientConfig" DataSource="@clientAppData" OnRowClick="OnRowClick" PageSize="10" @key="@clientAppDataKey">
+<Table TItem="McpClientConfig" DataSource="@clientAppData" OnRowClick="OnRowClick" PageSize="10"
+    @key="@clientAppDataKey">
     <AntDesign.Column Title="App ID" TData="string" DataIndex="@nameof(McpClientConfig.AppId)">
         <a>@context.AppId</a>
     </AntDesign.Column>
@@ -82,9 +83,8 @@
         }
         <Space Size="SpaceSize.Middle">
             <SpaceItem>
-                <Button Size="ButtonSize.Small" 
-                        OnClick="() => EditClientApp(context.AppId)"
-                        Disabled="@isDeleteLoading">
+                <Button Size="ButtonSize.Small" OnClick="() => EditClientApp(context.AppId)"
+                    Disabled="@isDeleteLoading">
                     <Icon Type="edit" Theme="IconThemeType.Outline" />
                     Edit
                 </Button>
@@ -92,24 +92,19 @@
             @if (context.McpServerIds?.Length > 0)
             {
                 <SpaceItem>
-                    <Button Size="ButtonSize.Small" 
-                            OnClick="() => ViewClientConfiguration(context.AppId, context.McpServerIds.First())"
-                            Disabled="@isDeleteLoading">
+                    <Button Size="ButtonSize.Small"
+                        OnClick="() => ViewClientConfiguration(context.AppId, context.McpServerIds.First())"
+                        Disabled="@isDeleteLoading">
                         <Icon Type="code" Theme="IconThemeType.Outline" />
                         View Config
                     </Button>
                 </SpaceItem>
             }
             <SpaceItem>
-                <Popconfirm Title="Are you sure you want to delete this client app?" 
-                           OnConfirm="() => DeleteClientApp(context.AppId)"
-                           OkText="Yes" 
-                           CancelText="No"
-                           Disabled="@isDeleteLoading">
-                    <Button Danger 
-                            Size="ButtonSize.Small"
-                            Loading="@isDeleteLoading"
-                            Disabled="@isDeleteLoading">
+                <Popconfirm Title="Are you sure you want to delete this client app?"
+                    OnConfirm="() => DeleteClientApp(context.AppId)" OkText="Yes" CancelText="No"
+                    Disabled="@isDeleteLoading">
+                    <Button Danger Size="ButtonSize.Small" Loading="@isDeleteLoading" Disabled="@isDeleteLoading">
                         <Icon Type="delete" Theme="IconThemeType.Outline" />
                         @(isDeleteLoading ? "Deleting..." : "Delete")
                     </Button>
@@ -119,19 +114,11 @@
     </ActionColumn>
 </Table>
 
-<Modal Title="Add New Client App"
-       Visible="@addClientAppModalVisible"
-       OnOk="HandleAddClientAppOk"
-       OnCancel="HandleAddClientAppCancel"
-       ConfirmLoading="@addClientAppLoading"
-       Width="800">
-    <Form Model="@newClientAppModel" 
-          LabelColSpan="6" 
-          WrapperColSpan="18"
-          OnFinish="OnAddClientAppFormFinish"
-          OnFinishFailed="OnAddClientAppFormFinishFailed"
-          @ref="addClientAppForm">
-        
+<Modal Title="Add New Client App" Visible="@addClientAppModalVisible" OnOk="HandleAddClientAppOk"
+    OnCancel="HandleAddClientAppCancel" ConfirmLoading="@addClientAppLoading" Width="800">
+    <Form Model="@newClientAppModel" LabelColSpan="6" WrapperColSpan="18" OnFinish="OnAddClientAppFormFinish"
+        OnFinishFailed="OnAddClientAppFormFinishFailed" @ref="addClientAppForm">
+
         <FormItem Label="App ID" Required>
             <Input @bind-Value="@newClientAppModel.AppId" Placeholder="Enter unique app ID" />
             <ValidationMessage For="@(() => newClientAppModel.AppId)" />
@@ -139,7 +126,8 @@
 
         <FormItem Label="App Key">
             <div style="display: flex; gap: 8px; align-items: center;">
-                <Input @bind-Value="@newClientAppModel.AppKey" Placeholder="Auto-generated app key" Disabled="true" Style="flex: 1;" />
+                <Input @bind-Value="@newClientAppModel.AppKey" Placeholder="Auto-generated app key" Disabled="true"
+                    Style="flex: 1;" />
                 <Button Type="ButtonType.Default" OnClick="GenerateNewAppKey">
                     <Icon Type="reload" Theme="IconThemeType.Outline" />
                     Generate
@@ -159,21 +147,20 @@
         </FormItem>
 
         <FormItem Label="Description">
-            <TextArea @bind-Value="@newClientAppModel.Description" 
-                     Placeholder="Enter optional description" 
-                     Rows="3" />
+            <TextArea @bind-Value="@newClientAppModel.Description" Placeholder="Enter optional description" Rows="3" />
         </FormItem>
 
         <FormItem Label="Associated MCP Servers">
             <div>
                 @if (availableServers?.Length > 0)
                 {
-                    <div style="max-height: 200px; overflow-y: auto; border: 1px solid #d9d9d9; border-radius: 6px; padding: 8px;">
+                    <div
+                        style="max-height: 200px; overflow-y: auto; border: 1px solid #d9d9d9; border-radius: 6px; padding: 8px;">
                         @foreach (var server in availableServers)
                         {
                             <div style="padding: 4px 0;">
                                 <Checkbox Checked="@GetServerSelected(server.ServerId)"
-                                         CheckedChanged="@(value => OnServerSelectionChanged(server.ServerId, value))">
+                                    CheckedChanged="@(value => OnServerSelectionChanged(server.ServerId, value))">
                                     <span>@server.ServerId</span>
                                     <Tag Color="@GetServerTypeColor(server.Type)" Style="margin-left: 8px;">@server.Type</Tag>
                                 </Checkbox>
@@ -194,19 +181,11 @@
     </Form>
 </Modal>
 
-<Modal Title="Edit Client App"
-       Visible="@editClientAppModalVisible"
-       OnOk="HandleEditClientAppOk"
-       OnCancel="HandleEditClientAppCancel"
-       ConfirmLoading="@editClientAppLoading"
-       Width="800">
-    <Form Model="@editClientAppModel" 
-          LabelColSpan="6" 
-          WrapperColSpan="18"
-          OnFinish="OnEditClientAppFormFinish"
-          OnFinishFailed="OnEditClientAppFormFinishFailed"
-          @ref="editClientAppForm">
-        
+<Modal Title="Edit Client App" Visible="@editClientAppModalVisible" OnOk="HandleEditClientAppOk"
+    OnCancel="HandleEditClientAppCancel" ConfirmLoading="@editClientAppLoading" Width="800">
+    <Form Model="@editClientAppModel" LabelColSpan="6" WrapperColSpan="18" OnFinish="OnEditClientAppFormFinish"
+        OnFinishFailed="OnEditClientAppFormFinishFailed" @ref="editClientAppForm">
+
         <FormItem Label="App ID">
             <Input @bind-Value="@editClientAppModel.AppId" Placeholder="App ID" Disabled="true" />
             <Text Type="TextElementType.Secondary">App ID cannot be changed</Text>
@@ -214,7 +193,8 @@
 
         <FormItem Label="App Key" Required>
             <div style="display: flex; gap: 8px; align-items: center;">
-                <Input @bind-Value="@editClientAppModel.AppKey" Placeholder="App key for authentication" Disabled="true" Style="flex: 1;" />
+                <Input @bind-Value="@editClientAppModel.AppKey" Placeholder="App key for authentication" Disabled="true"
+                    Style="flex: 1;" />
                 <Button Type="ButtonType.Default" OnClick="RegenerateAppKey">
                     <Icon Type="reload" Theme="IconThemeType.Outline" />
                     Regenerate
@@ -225,7 +205,8 @@
                     </Button>
                 </Tooltip>
             </div>
-            <Text Type="TextElementType.Secondary">App Key is auto-generated. Click regenerate to create a new one.</Text>
+            <Text Type="TextElementType.Secondary">App Key is auto-generated. Click regenerate to create a new
+                one.</Text>
             <ValidationMessage For="@(() => editClientAppModel.AppKey)" />
         </FormItem>
 
@@ -235,21 +216,20 @@
         </FormItem>
 
         <FormItem Label="Description">
-            <TextArea @bind-Value="@editClientAppModel.Description" 
-                     Placeholder="Enter optional description" 
-                     Rows="3" />
+            <TextArea @bind-Value="@editClientAppModel.Description" Placeholder="Enter optional description" Rows="3" />
         </FormItem>
 
         <FormItem Label="Associated MCP Servers">
             <div>
                 @if (availableServers?.Length > 0)
                 {
-                    <div style="max-height: 200px; overflow-y: auto; border: 1px solid #d9d9d9; border-radius: 6px; padding: 8px;">
+                    <div
+                        style="max-height: 200px; overflow-y: auto; border: 1px solid #d9d9d9; border-radius: 6px; padding: 8px;">
                         @foreach (var server in availableServers)
                         {
                             <div style="padding: 4px 0;">
                                 <Checkbox Checked="@GetEditServerSelected(server.ServerId)"
-                                         CheckedChanged="@(value => OnEditServerSelectionChanged(server.ServerId, value))">
+                                    CheckedChanged="@(value => OnEditServerSelectionChanged(server.ServerId, value))">
                                     <span>@server.ServerId</span>
                                     <Tag Color="@GetServerTypeColor(server.Type)" Style="margin-left: 8px;">@server.Type</Tag>
                                 </Checkbox>
@@ -270,17 +250,14 @@
     </Form>
 </Modal>
 
-<Modal Title="@($"MCP Links Configuration for {selectedConfigAppId}")"
-       Visible="@configurationModalVisible"
-       OnCancel="HandleConfigurationCancel"
-       Footer="null"
-       Width="800">
+<Modal Title="@($"MCP Links Configuration for {selectedConfigAppId}")" Visible="@configurationModalVisible"
+    OnCancel="HandleConfigurationCancel" Footer="null" Width="800">
     <div style="margin-bottom: 16px;">
         <Text Type="TextElementType.Secondary">
             Use this configuration in your MCP client application to connect to the aggregated MCP Links server.
         </Text>
     </div>
-    
+
     @if (loadingConfiguration)
     {
         <div style="text-align: center; padding: 40px;">
@@ -293,27 +270,30 @@
         <div style="margin-bottom: 16px;">
             <Space>
                 <SpaceItem>
-                    <Button Type="ButtonType.Primary" 
-                            OnClick="CopyConfigurationToClipboard"
-                            Loading="@copyConfigLoading">
+                    <Button Type="ButtonType.Primary" OnClick="CopyConfigurationToClipboard" Loading="@copyConfigLoading">
                         <Icon Type="copy" Theme="IconThemeType.Outline" />
                         Copy to Clipboard
                     </Button>
                 </SpaceItem>
             </Space>
         </div>
-        
+
         <div style="background: #f6f8fa; padding: 16px; border-radius: 6px; border: 1px solid #d0d7de;">
-            <pre style="margin: 0; white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.5;">@configurationContent</pre>
+            <pre
+                style="margin: 0; white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.5;">@configurationContent</pre>
         </div>
-        
+
         <div style="margin-top: 16px;">
-            <Alert Type="AlertType.Info" ShowIcon="true" Message="Usage Instructions" 
-                   Description="1. Copy the configuration above
-2. Add it to your MCP client application's configuration file (e.g., mcp.json)
-3. The client will use your unique App ID and App Key for authentication
-4. This connects to the aggregated MCP Links server that provides access to all associated MCP servers
-5. Make sure the server URL is accessible from your client environment" />
+            <Alert Type="AlertType.Info" ShowIcon="true" Message="Usage Instructions">
+                <div>
+                    1. Copy the configuration above<br />
+                    2. Add it to your MCP client application's configuration file (e.g., mcp.json)<br />
+                    3. The client will use your unique App ID and App Key for authentication<br />
+                    4. This connects to the aggregated MCP Links server that provides access to all associated MCP
+                    servers<br />
+                    5. Make sure the server URL is accessible from your client environment
+                </div>
+            </Alert>
         </div>
     }
 </Modal>

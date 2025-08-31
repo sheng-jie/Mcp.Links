@@ -35,6 +35,12 @@ public interface IMcpStoreService
     /// <param name="storeItem">The store item to generate ID for.</param>
     /// <returns>A unique server ID.</returns>
     Task<string> GenerateServerIdAsync(McpStoreItem storeItem);
+
+    /// <summary>
+    /// Gets all MCP servers available in the store.
+    /// </summary>
+    /// <returns>List of MCP store items.</returns>
+    Task<List<McpStoreItem>> GetAllStoreServersAsync();
 }
 
 /// <summary>

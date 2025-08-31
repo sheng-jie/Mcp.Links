@@ -57,35 +57,16 @@ namespace Mcp.Links.Http.Pages.Mcp
                 loading = true;
                 StateHasChanged();
 
-                var storeFilePath = Path.Combine(Environment.ContentRootPath, "mcp-store.json");
-                
-                if (File.Exists(storeFilePath))
-                {
-                    var json = await File.ReadAllTextAsync(storeFilePath);
-                    var items = JsonSerializer.Deserialize<List<McpStoreItem>>(json);
-                    
-                    if (items != null)
-                    {
-                        // Filter out invalid items and the last item which seems to be a count
-                        storeItems = items.Where(item => 
-                            !string.IsNullOrEmpty(item.Title) && 
-                            item.Title != "4 results found" &&
-                            !string.IsNullOrEmpty(item.Address)).ToList();
-                        
-                        ApplyFilter();
-                    }
-                }
-                else
-                {
-                    Logger.LogWarning("Store file not found: {FilePath}", storeFilePath);
-                    storeItems = new List<McpStoreItem>();
-                    filteredStoreItems = new List<McpStoreItem>();
-                }
+                // Use the service to get store data
+                storeItems = await McpStoreService.GetAllStoreServersAsync();
+                ApplyFilter();
             }
             catch (System.Exception ex)
             {
                 Logger.LogError(ex, "Error loading store data");
                 MessageService.Error("Failed to load store data. Please try again.");
+                storeItems = new List<McpStoreItem>();
+                filteredStoreItems = new List<McpStoreItem>();
             }
             finally
             {
