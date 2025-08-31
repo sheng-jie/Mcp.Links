@@ -1,5 +1,7 @@
 [English](README.md) | [简体中文](README_zh-cn.md)
 
+![](./doc/imgs/intro.png)
+
 # Mcp.Links
 
 一个基于 .NET 9.0 构建的强大的模型上下文协议 (MCP) 聚合器，能够无缝集成和管理多个 MCP 服务器。该项目提供 HTTP 和命令行接口，将各种 MCP 服务器聚合到统一平台中。

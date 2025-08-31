@@ -1,5 +1,8 @@
 [简体中文](README_zh-cn.md) | [English](README.md)
 
+
+![](./doc/imgs/intro.png)
+
 # Mcp.Links
 
 A powerful Model Context Protocol (MCP) aggregator built with .NET 9.0 that enables seamless integration and management of multiple MCP servers. This project provides both HTTP and command-line interfaces for aggregating various MCP servers into a unified platform.
