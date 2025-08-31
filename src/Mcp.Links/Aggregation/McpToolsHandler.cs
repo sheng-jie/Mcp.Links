@@ -59,8 +59,9 @@ public sealed class McpToolsHandler
         var appId = _httpContextAccessor.HttpContext?.Request.Headers["X-AppId"].FirstOrDefault();
 
         var clientWrappers = await GetClientWrappersByAppId(appId ?? string.Empty, cancellation).ConfigureAwait(false);
-        var toolLists = await Task.WhenAll(
-            clientWrappers.Select(async clientWrapper =>
+        var toolListTasks = clientWrappers.Select(async clientWrapper =>
+        {
+            try
             {
                 var clientTools = await clientWrapper.McpClient.ListToolsAsync(cancellationToken: cancellation);
                 return clientTools.Select(tool =>
@@ -68,9 +69,17 @@ public sealed class McpToolsHandler
                     var protocolTool = tool.ProtocolTool;
                     protocolTool.Name = $"{clientWrapper.Name}-{protocolTool.Name}";
                     return protocolTool;
-                });
-            })
-        ).ConfigureAwait(false);
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to list tools from MCP client '{ClientName}': {ErrorMessage}", 
+                    clientWrapper.Name, ex.Message);
+                return new List<ModelContextProtocol.Protocol.Tool>();
+            }
+        });
+
+        var toolLists = await Task.WhenAll(toolListTasks).ConfigureAwait(false);
 
         return new ListToolsResult
         {

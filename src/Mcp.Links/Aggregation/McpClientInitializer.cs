@@ -33,9 +33,18 @@ internal static class McpClientInitializer
                 var serverId = serverConfig.Key;
                 var config = serverConfig.Value;
 
-                var clientWrapper = new McpClientWrapper(serverId, config, loggerFactory);
-                await clientWrapper.InitializeAsync().ConfigureAwait(false);
-                clientWrappers.Add(clientWrapper);
+                try
+                {
+                    var clientWrapper = new McpClientWrapper(serverId, config, loggerFactory);
+                    await clientWrapper.InitializeAsync().ConfigureAwait(false);
+                    clientWrappers.Add(clientWrapper);
+                }
+                catch (Exception ex)
+                {
+                    var logger = loggerFactory?.CreateLogger(typeof(McpClientInitializer));
+                    logger?.LogError(ex, "Failed to initialize MCP client '{ServerId}': {ErrorMessage}", 
+                        serverId, ex.Message);
+                }
             }
         ).ConfigureAwait(false);
 
