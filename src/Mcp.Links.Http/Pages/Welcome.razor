@@ -83,11 +83,11 @@
         <Title Level="3" Style="margin-bottom: 24px;">Quick Actions</Title>
         <div class="quick-actions-grid" style="margin-bottom: 32px;">
             <Card Hoverable Style="cursor: pointer;">
-                <div class="quick-action-item" @onclick="NavigateToEnvCheck">
-                    <Icon Type="safety-certificate" Theme="IconThemeType.TwoTone" Style="font-size: 48px; margin-bottom: 16px;" />
-                    <Title Level="4">Environment Check</Title>
+                <div class="quick-action-item" @onclick="NavigateToStore">
+                    <Icon Type="shop" Theme="IconThemeType.TwoTone" Style="font-size: 48px; margin-bottom: 16px;" />
+                    <Title Level="4">MCP Store</Title>
                     <Paragraph Style="color: #666;">
-                        Verify your system environment and check for any configuration issues.
+                        Browse and discover available MCP servers from the community store.
                     </Paragraph>
                 </div>
             </Card>
@@ -101,20 +101,20 @@
                 </div>
             </Card>
             <Card Hoverable Style="cursor: pointer;">
-                <div class="quick-action-item" @onclick="NavigateToInspector">
-                    <Icon Type="experiment" Theme="IconThemeType.TwoTone" Style="font-size: 48px; margin-bottom: 16px;" />
-                    <Title Level="4">Tool Inspector</Title>
-                    <Paragraph Style="color: #666;">
-                        Test and debug tools, resources, and prompts from your connected MCP servers.
-                    </Paragraph>
-                </div>
-            </Card>
-            <Card Hoverable Style="cursor: pointer;">
                 <div class="quick-action-item" @onclick="NavigateToClientApps">
                     <Icon Type="appstore" Theme="IconThemeType.TwoTone" Style="font-size: 48px; margin-bottom: 16px;" />
                     <Title Level="4">Client Apps</Title>
                     <Paragraph Style="color: #666;">
                         Manage client applications and their configurations for different use cases.
+                    </Paragraph>
+                </div>
+            </Card>
+            <Card Hoverable Style="cursor: pointer;">
+                <div class="quick-action-item" @onclick="NavigateToInspector">
+                    <Icon Type="experiment" Theme="IconThemeType.TwoTone" Style="font-size: 48px; margin-bottom: 16px;" />
+                    <Title Level="4">Tool Inspector</Title>
+                    <Paragraph Style="color: #666;">
+                        Test and debug tools, resources, and prompts from your connected MCP servers.
                     </Paragraph>
                 </div>
             </Card>

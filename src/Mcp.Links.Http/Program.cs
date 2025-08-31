@@ -46,6 +46,9 @@ builder.Services.AddScoped<IMcpInspectorService, McpInspectorService>();
 // Register MCP client app service  
 builder.Services.AddScoped<IMcpClientAppService, McpClientAppService>();
 
+// Register MCP store service
+builder.Services.AddScoped<IMcpStoreService, McpStoreService>();
+
 
 // Add services to the container.
 builder.Services.AddRazorPages();

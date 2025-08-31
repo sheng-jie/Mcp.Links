@@ -24,6 +24,13 @@ namespace Mcp.Links.Http.Layouts
                 },
                 new MenuDataItem
                 {
+                    Path = "/mcp/store",
+                    Name = "Store",
+                    Key = "mcp-store",
+                    Icon = "shop",
+                },
+                new MenuDataItem
+                {
                     Path = "/mcp/servers",
                     Name = "Servers",
                     Key = "mcp-servers",

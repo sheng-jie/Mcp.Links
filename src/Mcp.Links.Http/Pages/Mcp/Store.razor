@@ -1,0 +1,325 @@
+@namespace Mcp.Links.Http.Pages.Mcp
+
+@using System.ComponentModel
+@using AntDesign.TableModels
+@using AntDesign
+@using global::Mcp.Links.Configuration
+@using global::Mcp.Links.Http.Services
+@using Microsoft.Extensions.Options
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using System.Text.Encodings.Web
+@using System.ComponentModel.DataAnnotations
+
+@page "/mcp/store"
+
+@inherits StoreBase
+
+<PageContainer Title="MCP Store">
+    <Extra>
+        <Space>
+            <SpaceItem>
+                <Button Type="@ButtonType.Default" OnClick="RefreshStore" Loading="@refreshLoading">
+                    <Icon Type="reload" Theme="@IconThemeType.Outline" />
+                    @(refreshLoading ? "Refreshing..." : "Refresh")
+                </Button>
+            </SpaceItem>
+            <SpaceItem>
+                <Input @bind-Value="@searchText" 
+                       Placeholder="Search MCP servers..." 
+                       OnInput="OnSearchInput"
+                       Style="width: 300px;">
+                    <Prefix><Icon Type="search" /></Prefix>
+                </Input>
+            </SpaceItem>
+        </Space>
+    </Extra>
+    <ChildContent>
+        <div style="margin-bottom: 24px;">
+            <Text Type="@TextElementType.Secondary">Discover and explore Model Context Protocol servers</Text>
+        </div>
+        
+        @if (loading)
+        {
+            <div style="text-align: center; padding: 40px;">
+                <Spin Size="@SpinSize.Large" />
+                <div style="margin-top: 16px;">Loading MCP Store...</div>
+            </div>
+        }
+        else if (filteredStoreItems?.Any() == true)
+        {
+            <Row Gutter="(16, 16)">
+                @foreach (var item in filteredStoreItems)
+                {
+                    <AntDesign.Col Xs="24" Sm="12" Md="8" Lg="6" Xl="6" Xxl="4">
+                        <Card Hoverable="true" Actions="GetCardActions(item)">
+                            <CardMeta>
+                                <AvatarTemplate>
+                                    @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                    {
+                                        <Avatar Src="@item.ImageUrl" Size="@AvatarSize.Large" />
+                                    }
+                                    else
+                                    {
+                                        <Avatar Size="@AvatarSize.Large" Style="background-color: #1890ff;">
+                                            <Icon Type="api" />
+                                        </Avatar>
+                                    }
+                                </AvatarTemplate>
+                                <TitleTemplate>
+                                    <div style="font-weight: bold; margin-bottom: 4px;">
+                                        @(!string.IsNullOrEmpty(item.Title) ? item.Title : "Untitled Server")
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(item.Author))
+                                    {
+                                        <div style="font-size: 12px; color: #999; margin-bottom: 8px;">
+                                            <Icon Type="user" Style="margin-right: 4px;" />
+                                            @item.Author
+                                        </div>
+                                    }
+                                </TitleTemplate>
+                                <DescriptionTemplate>
+                                    <div style="height: 60px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; line-height: 1.4; font-size: 13px; color: #666;">
+                                        @(!string.IsNullOrEmpty(item.Profile) ? item.Profile : "No description available.")
+                                    </div>
+                                </DescriptionTemplate>
+                            </CardMeta>
+                        </Card>
+                    </AntDesign.Col>
+                }
+            </Row>
+
+            @if (totalItems > pageSize)
+            {
+                <div style="margin-top: 24px; text-align: center;">
+                    <Pagination Current="@currentPage" 
+                               Total="@totalItems" 
+                               PageSize="@pageSize" 
+                               ShowSizeChanger="false"
+                               OnChange="OnPageChanged" />
+                </div>
+            }
+        }
+        else
+        {
+            <Empty Description="@("No MCP servers found in the store")">
+                <ChildContent>
+                    <Button Type="@ButtonType.Primary" OnClick="RefreshStore">
+                        <Icon Type="reload" Theme="@IconThemeType.Outline" />
+                        Refresh Store
+                    </Button>
+                </ChildContent>
+            </Empty>
+        }
+    </ChildContent>
+</PageContainer>
+
+<!-- Detail Modal -->
+<Modal Title="@selectedItem?.Title"
+       Visible="@detailModalVisible"
+       OnCancel="HandleDetailCancel"
+       Footer="null"
+       Width="800">
+    @if (selectedItem != null)
+    {
+        <div style="margin-bottom: 16px;">
+            <Space Direction="SpaceDirection.Horizontal" Size="@SpaceSize.Large">
+                @if (!string.IsNullOrEmpty(selectedItem.ImageUrl))
+                {
+                    <SpaceItem>
+                        <Avatar Src="@selectedItem.ImageUrl" Size="@AvatarSize.Large" />
+                    </SpaceItem>
+                }
+                <SpaceItem>
+                    <div>
+                        <Title Level="3" Style="margin: 0;">@selectedItem.Title</Title>
+                        @if (!string.IsNullOrEmpty(selectedItem.Author))
+                        {
+                            <div style="margin: 4px 0; color: #666;">
+                                <Icon Type="user" Style="margin-right: 4px;" />
+                                @selectedItem.Author
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(selectedItem.Address))
+                        {
+                            <div style="margin: 4px 0;">
+                                <Button Type="@ButtonType.Link" 
+                                        OnClick="@(() => OpenLink(selectedItem.Address))"
+                                        Size="@ButtonSize.Small">
+                                    <Icon Type="github" Style="margin-right: 4px;" />
+                                    View Source
+                                </Button>
+                            </div>
+                        }
+                    </div>
+                </SpaceItem>
+            </Space>
+        </div>
+
+        <Divider />
+
+        @if (!string.IsNullOrEmpty(selectedItem.Profile))
+        {
+            <div style="margin-bottom: 16px;">
+                <Title Level="5">Description</Title>
+                <Paragraph>
+                    @selectedItem.Profile
+                </Paragraph>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(selectedItem.Overview))
+        {
+            <div style="margin-bottom: 16px;">
+                <Title Level="5">Overview</Title>
+                <div class="markdown-content">
+                    @((MarkupString)ConvertMarkdownToHtml(selectedItem.Overview))
+                </div>
+            </div>
+        }
+    }
+</Modal>
+
+<!-- Configuration Modal -->
+<Modal Title="Configuration"
+       Visible="@configModalVisible"
+       OnCancel="HandleConfigCancel"
+       Width="800"
+       OnOk="CopyConfigToClipboard"
+       OkText="@(copyConfigLoading ? "Copying..." : "Copy to Clipboard")"
+       ConfirmLoading="@copyConfigLoading">
+    @if (selectedItem != null && !string.IsNullOrEmpty(selectedItem.Config))
+    {
+        <div style="margin-bottom: 16px;">
+            <Alert Type="@AlertType.Info" 
+                   Message="Configuration" 
+                   Description="Copy this configuration to your MCP client configuration file." 
+                   ShowIcon="true" />
+        </div>
+        
+        <div style="background: #f6f6f6; border: 1px solid #d9d9d9; border-radius: 6px; padding: 12px;">
+            <pre style="margin: 0; white-space: pre-wrap; word-wrap: break-word; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; font-size: 14px; line-height: 1.4;">@selectedItem.Config</pre>
+        </div>
+    }
+    else
+    {
+        <div style="text-align: center; padding: 40px; color: #999;">
+            <Icon Type="file-exclamation" Theme="@IconThemeType.Outline" Style="font-size: 48px; margin-bottom: 16px;" />
+            <div>No configuration available</div>
+        </div>
+    }
+</Modal>
+
+<!-- Install Modal -->
+<Modal Title="Install MCP Server"
+       Visible="@installModalVisible"
+       OnCancel="HandleInstallCancel"
+       Width="700"
+       OnOk="ConfirmInstall"
+       OkText="@(installLoading ? "Installing..." : "Install Server")"
+       ConfirmLoading="@installLoading">
+    @if (selectedItem != null && installationInfo != null)
+    {
+        <div style="margin-bottom: 16px;">
+            @if (validationResult?.IsValid == true)
+            {
+                <Alert Type="@AlertType.Success" 
+                       Message="Ready to Install" 
+                       Description="This MCP server is ready to be installed." 
+                       ShowIcon="true" />
+            }
+            else
+            {
+                <Alert Type="@AlertType.Error" 
+                       Message="Installation Issues" 
+                       Description="@(string.Join(", ", validationResult?.Errors ?? new List<string>()))" 
+                       ShowIcon="true" />
+            }
+            
+            @if (validationResult?.Warnings?.Any() == true)
+            {
+                <div style="margin-top: 8px;">
+                    <Alert Type="@AlertType.Warning" 
+                           Message="Installation Notes" 
+                           Description="@(string.Join(", ", validationResult.Warnings))" 
+                           ShowIcon="true" />
+                </div>
+            }
+        </div>
+        
+        <Space Direction="SpaceDirection.Horizontal" Size="@SpaceSize.Large" style="margin-bottom: 16px;">
+            @if (!string.IsNullOrEmpty(selectedItem.ImageUrl))
+            {
+                <SpaceItem>
+                    <Avatar Src="@selectedItem.ImageUrl" Size="@AvatarSize.Default" />
+                </SpaceItem>
+            }
+            <SpaceItem>
+                <div>
+                    <div style="font-weight: bold; font-size: 16px;">@selectedItem.Title</div>
+                    <div style="color: #666; margin: 4px 0;">@selectedItem.Author</div>
+                    <div style="font-size: 13px; color: #999;">@selectedItem.Profile</div>
+                </div>
+            </SpaceItem>
+        </Space>
+
+        <Descriptions Title="Installation Details" Size="@DescriptionsSize.Small" Bordered="true" Column="1">
+            <DescriptionsItem Title="Server Type">
+                <Badge Color="@(installationInfo.ServerType == "stdio" ? "blue" : "green")" 
+                       Text="@installationInfo.ServerType.ToUpperInvariant()" />
+            </DescriptionsItem>
+            
+            <DescriptionsItem Title="Server ID">
+                <Input @bind-Value="@customServerId" 
+                       Placeholder="Enter custom server ID or use generated one"
+                       Style="width: 100%;" />
+            </DescriptionsItem>
+
+            @if (installationInfo.ServerType == "stdio")
+            {
+                <DescriptionsItem Title="Command">
+                    <Text Code="true">@installationInfo.Command</Text>
+                </DescriptionsItem>
+                
+                @if (installationInfo.Args?.Any() == true)
+                {
+                    <DescriptionsItem Title="Arguments">
+                        <Text Code="true">@string.Join(" ", installationInfo.Args)</Text>
+                    </DescriptionsItem>
+                }
+            }
+            else
+            {
+                <DescriptionsItem Title="URL">
+                    <Text Code="true">@installationInfo.Url</Text>
+                </DescriptionsItem>
+            }
+
+            @if (installationInfo.RequiresEnvironmentVariables)
+            {
+                <DescriptionsItem Title="Required Environment Variables">
+                    <div>
+                        @foreach (var envVar in installationInfo.RequiredEnvironmentVars ?? Array.Empty<string>())
+                        {
+                            <Tag Color="TagColor.Orange" style="margin: 2px;">@envVar</Tag>
+                        }
+                    </div>
+                    <div style="margin-top: 8px; font-size: 12px; color: #666;">
+                        <Icon Type="exclamation-circle" Theme="@IconThemeType.Outline" style="margin-right: 4px;" />
+                        You will need to configure these environment variables after installation.
+                    </div>
+                </DescriptionsItem>
+            }
+        </Descriptions>
+
+        @if (!string.IsNullOrEmpty(installationInfo.InstallationNotes))
+        {
+            <div style="margin-top: 16px;">
+                <Title Level="5">Installation Notes</Title>
+                <div style="background: #f6f6f6; border: 1px solid #d9d9d9; border-radius: 6px; padding: 12px; white-space: pre-line; font-family: monospace; font-size: 12px;">
+                    @installationInfo.InstallationNotes
+                </div>
+            </div>
+        }
+    }
+</Modal>

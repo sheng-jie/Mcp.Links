@@ -11,6 +11,7 @@
       <!-- copy mcp.json always-->
     <None Update="mcp.json" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="/" /> 
     <None Update="client-apps.json" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="/" /> 
+    <None Update="mcp-store.json" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="/" />
   </ItemGroup>
 
   <ItemGroup>
@@ -24,6 +25,7 @@
     <PackageReference Include="AntDesign.Extensions.Localization" Version="1.4.0" />
     <PackageReference Include="AntDesign.ProLayout" Version="1.4.0" />
     <PackageReference Include="System.Net.Http.Json" Version="9.0.8" />
+    <PackageReference Include="Markdig" Version="0.38.0" />
   </ItemGroup>
 
 </Project>

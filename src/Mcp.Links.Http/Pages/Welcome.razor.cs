@@ -143,6 +143,11 @@ public partial class Welcome
         Navigation.NavigateTo("/mcp/env-check");
     }
 
+    private void NavigateToStore()
+    {
+        Navigation.NavigateTo("/mcp/store");
+    }
+
     private void NavigateToClientApps()
     {
         Navigation.NavigateTo("/mcp/clients");
