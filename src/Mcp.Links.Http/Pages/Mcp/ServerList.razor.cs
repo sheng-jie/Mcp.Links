@@ -14,7 +14,7 @@ using Microsoft.JSInterop;
 
 namespace Mcp.Links.Http.Pages.Mcp
 {
-    public partial class ServerListBase : ComponentBase
+    public class ServerListBase : ComponentBase
     {
         [Inject] protected IMcpServerService McpServerService { get; set; } = default!;
         [Inject] protected IMessageService MessageService { get; set; } = default!;
@@ -23,6 +23,12 @@ namespace Mcp.Links.Http.Pages.Mcp
         [Inject] protected IJSRuntime JSRuntime { get; set; } = default!;
 
         protected McpServerInfo[] serverData = Array.Empty<McpServerInfo>();
+        protected McpServerInfo[] filteredServerData = Array.Empty<McpServerInfo>();
+        
+        // Search functionality
+        protected string searchText = "";
+        protected string searchType = "";
+        protected string searchStatus = "";
         
         // Add server modal state
         protected bool addServerModalVisible = false;
@@ -55,6 +61,9 @@ namespace Mcp.Links.Http.Pages.Mcp
         protected bool refreshJsonLoading = false;
         protected string mcpJsonContent = "";
 
+        // Refresh server list loading state
+        protected bool refreshLoading = false;
+
         protected override async Task OnInitializedAsync()
         {
             await LoadServerDataAsync();
@@ -65,11 +74,104 @@ namespace Mcp.Links.Http.Pages.Mcp
             try
             {
                 serverData = await McpServerService.GetAllServersAsync();
+                ApplyFilters(); // Apply filters after loading data
             }
             catch (System.Exception ex)
             {
                 MessageService.Error($"Failed to load server data: {ex.Message}");
                 serverData = Array.Empty<McpServerInfo>();
+                filteredServerData = Array.Empty<McpServerInfo>();
+            }
+        }
+
+        protected void ApplyFilters()
+        {
+            var filtered = serverData.AsEnumerable();
+
+            // Apply text search
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                var searchTerm = searchText.ToLowerInvariant();
+                filtered = filtered.Where(s => 
+                    (s.ServerId?.ToLowerInvariant().Contains(searchTerm) ?? false) ||
+                    (s.Type?.ToLowerInvariant().Contains(searchTerm) ?? false) ||
+                    (s.Command?.ToLowerInvariant().Contains(searchTerm) ?? false) ||
+                    (s.Url?.ToLowerInvariant().Contains(searchTerm) ?? false));
+            }
+
+            // Apply type filter
+            if (!string.IsNullOrWhiteSpace(searchType))
+            {
+                filtered = filtered.Where(s => s.Type?.Equals(searchType, StringComparison.OrdinalIgnoreCase) ?? false);
+            }
+
+            // Apply status filter
+            if (!string.IsNullOrWhiteSpace(searchStatus))
+            {
+                var isEnabled = searchStatus.Equals("enabled", StringComparison.OrdinalIgnoreCase);
+                filtered = filtered.Where(s => s.Enabled == isEnabled);
+            }
+
+            filteredServerData = filtered.ToArray();
+            StateHasChanged();
+        }
+
+        protected void OnSearchTextChanged(ChangeEventArgs args)
+        {
+            searchText = args.Value?.ToString() ?? "";
+            ApplyFilters();
+        }
+
+        protected void OnSearchTypeChanged(string value)
+        {
+            searchType = value ?? "";
+            ApplyFilters();
+        }
+
+        protected void OnSearchStatusChanged(string value)
+        {
+            searchStatus = value ?? "";
+            ApplyFilters();
+        }
+
+        protected void OnSearchTypeClear()
+        {
+            searchType = "";
+            ApplyFilters();
+        }
+
+        protected void OnSearchStatusClear()
+        {
+            searchStatus = "";
+            ApplyFilters();
+        }
+
+        protected void ClearAllFilters()
+        {
+            searchText = "";
+            searchType = "";
+            searchStatus = "";
+            ApplyFilters();
+        }
+
+        protected async Task RefreshServerList()
+        {
+            refreshLoading = true;
+            StateHasChanged();
+
+            try
+            {
+                await LoadServerDataAsync(); // This will also apply filters
+                MessageService.Success("Server list refreshed successfully.");
+            }
+            catch (System.Exception ex)
+            {
+                MessageService.Error($"Failed to refresh server list: {ex.Message}");
+            }
+            finally
+            {
+                refreshLoading = false;
+                StateHasChanged();
             }
         }
 
@@ -109,7 +211,7 @@ namespace Mcp.Links.Http.Pages.Mcp
                 await McpServerService.ToggleServerStatusAsync(serverId, newStatus);
                 
                 // Refresh the data to reflect changes
-                await LoadServerDataAsync();
+                await LoadServerDataAsync(); // This will also apply filters
                 
                 var statusText = newStatus ? "enabled" : "disabled";
                 MessageService.Success($"Server '{serverId}' has been {statusText}.");
@@ -195,7 +297,7 @@ namespace Mcp.Links.Http.Pages.Mcp
                 await McpServerService.DeleteServerAsync(serverId);
                 
                 // Refresh the data to reflect changes
-                await LoadServerDataAsync();
+                await LoadServerDataAsync(); // This will also apply filters
                 
                 MessageService.Success($"Server '{serverId}' has been deleted successfully.");
                 StateHasChanged();
@@ -243,7 +345,7 @@ namespace Mcp.Links.Http.Pages.Mcp
                 await SaveNewServer();
                 addServerModalVisible = false;
                 MessageService.Success($"Server '{newServerModel.ServerId}' has been added successfully.");
-                await LoadServerDataAsync(); // Refresh the table
+                await LoadServerDataAsync(); // This will also apply filters
             }
             catch (System.Exception ex)
             {
@@ -385,7 +487,7 @@ namespace Mcp.Links.Http.Pages.Mcp
                 await SaveEditedServer();
                 editServerModalVisible = false;
                 MessageService.Success($"Server '{editServerModel.ServerId}' has been updated successfully.");
-                await LoadServerDataAsync(); // Refresh the table
+                await LoadServerDataAsync(); // This will also apply filters
             }
             catch (System.Exception ex)
             {

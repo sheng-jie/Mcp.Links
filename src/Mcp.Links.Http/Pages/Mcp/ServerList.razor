@@ -15,9 +15,15 @@
 
 @inherits ServerListBase
 
-<PageHeader Class="site-page-header" Title="MCP Servers" SubTitle="Management of Model Context Protocol servers">
+<PageHeader Class="site-page-header" Title="MCP Servers" SubTitle="Management of MCP Server Instances">
     <PageHeaderExtra>
         <Space>
+            <SpaceItem>
+                <Button Type="ButtonType.Default" OnClick="RefreshServerList" Loading="@refreshLoading">
+                    <Icon Type="reload" Theme="IconThemeType.Outline" />
+                    @(refreshLoading ? "Refreshing..." : "Refresh")
+                </Button>
+            </SpaceItem>
             <SpaceItem>
                 <Button Type="ButtonType.Default" OnClick="ShowMcpJsonModal">
                     <Icon Type="file-text" Theme="IconThemeType.Outline" />
@@ -34,7 +40,68 @@
     </PageHeaderExtra>
 </PageHeader>
 
-<Table TItem="McpServerInfo" DataSource="@serverData" OnRowClick="OnRowClick" PageSize="10">
+<div style="margin-bottom: 16px; padding: 16px; background: #fafafa; border-radius: 6px;">
+    <Row Gutter="16">
+        <Col Span="12">
+            <Input Placeholder="Search servers by ID, type, command, or URL..." 
+                   @bind-Value="@searchText" 
+                   @oninput="OnSearchTextChanged"
+                   AllowClear="true"
+                   Size="InputSize.Default">
+                <Prefix>
+                    <Icon Type="search" Theme="IconThemeType.Outline" />
+                </Prefix>
+            </Input>
+        </Col>
+        <Col Span="6">
+            <Select TItemValue="string" TItem="string"
+                    @bind-Value="@searchType" 
+                    Placeholder="Filter by type"
+                    AllowClear="true"
+                    Style="width: 100%;"
+                    OnSelectedItemChanged="OnSearchTypeChanged"
+                    OnClearSelected="OnSearchTypeClear">
+                <SelectOptions>
+                    <SelectOption TItemValue="string" TItem="string" Value="@("")" Label="All Types" />
+                    <SelectOption TItemValue="string" TItem="string" Value="@("stdio")" Label="stdio" />
+                    <SelectOption TItemValue="string" TItem="string" Value="@("sse")" Label="sse" />
+                    <SelectOption TItemValue="string" TItem="string" Value="@("http")" Label="http" />
+                </SelectOptions>
+            </Select>
+        </Col>
+        <Col Span="6">
+            <Select TItemValue="string" TItem="string"
+                    @bind-Value="@searchStatus" 
+                    Placeholder="Filter by status"
+                    AllowClear="true"
+                    Style="width: 100%;"
+                    OnSelectedItemChanged="OnSearchStatusChanged"
+                    OnClearSelected="OnSearchStatusClear">
+                <SelectOptions>
+                    <SelectOption TItemValue="string" TItem="string" Value="@("")" Label="All Status" />
+                    <SelectOption TItemValue="string" TItem="string" Value="@("enabled")" Label="Enabled" />
+                    <SelectOption TItemValue="string" TItem="string" Value="@("disabled")" Label="Disabled" />
+                </SelectOptions>
+            </Select>
+        </Col>
+    </Row>
+    @if (filteredServerData.Length != serverData.Length)
+    {
+        <div style="margin-top: 12px;">
+            <Text Type="TextElementType.Secondary">
+                Showing @filteredServerData.Length of @serverData.Length servers
+            </Text>
+            <Button Type="ButtonType.Link" 
+                    Size="ButtonSize.Small" 
+                    OnClick="ClearAllFilters"
+                    Style="margin-left: 8px;">
+                Clear all filters
+            </Button>
+        </div>
+    }
+</div>
+
+<Table TItem="McpServerInfo" DataSource="@filteredServerData" OnRowClick="OnRowClick" PageSize="10">
     <AntDesign.Column Title="Server ID" TData="string" DataIndex="@nameof(McpServerInfo.ServerId)">
         <a>@context.ServerId</a>
     </AntDesign.Column>
