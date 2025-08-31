@@ -2,13 +2,10 @@ name: Trigger auto deployment for mcp-links
 
 # When this action will be executed
 on:
-  # Automatically trigger it when detected changes in repo
+  # Automatically trigger it when tags are created
   push:
-    branches: 
-      [ main ]
-    paths:
-    - '**'
-    - '.github/workflows/mcp-links-AutoDeployTrigger-50990fb5-be48-4371-939e-6c00f3306024.yml'
+    tags:
+      - 'v*'
 
   # Allow manual trigger 
   workflow_dispatch:
@@ -37,9 +34,9 @@ jobs:
           registryPassword: ${{ secrets.MCPLINKS_REGISTRY_PASSWORD }}
           containerAppName: mcp-links
           resourceGroup: mcp
-          imageToBuild: ghcr.io/mcp-links:${{ github.sha }}
-          
-            
+          imageToBuild: ghcr.io/sheng-jie/mcp-links:${{ github.ref_name }}
 
-     
+
+
+
 
