@@ -1,0 +1,72 @@
+# Build artifacts
+bin/
+obj/
+
+# .dockerignore and Dockerfile
+.dockerignore
+Dockerfile
+
+# Version control
+.git/
+.github/
+.gitignore
+
+# IDE files
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# OS files
+**/.DS_Store
+**/Thumbs.db
+
+# Node.js dependencies
+**/node_modules/
+
+# Python cache
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.egg-info/
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+temp/
+tmp/
+
+# Test results
+TestResults/
+**/*.trx
+
+# Coverage reports
+coverage/
+*.coverage
+
+# NuGet packages
+packages/
+*.nupkg
+
+# Backup files
+*.bak
+*.tmp
+*.swp
+*~
+
+# Local configuration files that shouldn't be in containers
+appsettings.Development.json
+appsettings.Local.json
+
+# Documentation
+README.md
+README_zh-cn.md
+LICENSE.txt
+*.md
+
+# Solution files
+*.sln
+*.slnx

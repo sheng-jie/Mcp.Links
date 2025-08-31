@@ -10,6 +10,7 @@
   <ItemGroup>
       <!-- copy mcp.json always-->
     <None Update="mcp.json" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="/" /> 
+    <None Update="client-apps.json" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="/" /> 
   </ItemGroup>
 
   <ItemGroup>

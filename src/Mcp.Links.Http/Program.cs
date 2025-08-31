@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Components;
 using AntDesign.ProLayout;
 using Mcp.Links.Http.Extensions;
 using Mcp.Links.Http;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -65,7 +66,16 @@ builder.Services.AddHostedService<McpClientStartupService>();
 
 builder.Services.AddAggregatedHttpMcpServer();
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 var app = builder.Build();
+
+app.UseForwardedHeaders();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
