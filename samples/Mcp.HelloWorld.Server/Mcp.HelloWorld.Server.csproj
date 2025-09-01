@@ -9,6 +9,8 @@
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="0.3.0-preview.4" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Prompts\" />
+    <Content Include="Prompts\*.prompt.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>
