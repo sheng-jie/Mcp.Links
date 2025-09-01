@@ -4,4 +4,8 @@
     <Project Path="src/Mcp.Links.Http/Mcp.Links.Http.csproj" />
     <Project Path="src/Mcp.Links/Mcp.Links.csproj" />
   </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/Mcp.HelloWorld.Client/Mcp.HelloWorld.Client.csproj" />
+    <Project Path="samples/Mcp.HelloWorld.Server/Mcp.HelloWorld.Server.csproj" />
+  </Folder>
 </Solution>
