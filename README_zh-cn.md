@@ -53,6 +53,8 @@ dotnet run --project src/Mcp.Links.Http/Mcp.Links.Http.csproj
 
 服务器将在 `http://localhost:5146` 启动，MCP 端点可在 `/mcp` 访问。
 
+访问 `http://localhost:5146/mcp/env-check` 来检查本地环境是否满足要求。
+
 ### 2. 配置
 
 #### MCP 服务器配置 (`mcp.json`)
@@ -76,10 +78,10 @@ dotnet run --project src/Mcp.Links.Http/Mcp.Links.Http.csproj
       "command": "uvx",
       "args": ["mcp-server-time", "--local-timezone=Asia/Shanghai"]
     },
-    "csharp-api": {
+    "microsoft-learn": {
       "enabled": false,
       "type": "http",
-      "url": "https://api.example.com/mcp"
+      "url": "https://learn.microsoft.com/api/mcp"
     }
   }
 }
@@ -202,4 +204,4 @@ Web 管理界面提供：
 
 ---
 
-**使用 .NET 9.0、Blazor Server 和 MCP C# SDK 用 ❤️ 构建**
+**使用 .NET 9.0、AntBlazor 和 MCP C# SDK 用 ❤️ 构建**

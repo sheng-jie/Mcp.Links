@@ -54,6 +54,8 @@ dotnet run --project src/Mcp.Links.Http/Mcp.Links.Http.csproj
 
 The server will start on `http://localhost:5146` with the MCP endpoint available at `/mcp`.
 
+Visit `http://localhost:5146/mcp/env-check` to check if your local environment is satisfied.
+
 ### 2. Configuration
 
 #### MCP Servers Configuration (`mcp.json`)
@@ -77,10 +79,10 @@ The server will start on `http://localhost:5146` with the MCP endpoint available
       "command": "uvx",
       "args": ["mcp-server-time", "--local-timezone=Asia/Shanghai"]
     },
-    "csharp-api": {
+    "microsoft-learn": {
       "enabled": false,
       "type": "http",
-      "url": "https://api.example.com/mcp"
+      "url": "https://learn.microsoft.com/api/mcp"
     }
   }
 }
@@ -204,4 +206,4 @@ This project is licensed under the terms specified in the [LICENSE.txt](LICENSE.
 
 ---
 
-**Built with ❤️ using .NET 9.0, Blazor Server, and the MCP C# SDK**
+**Built with ❤️ using .NET 9.0, AntBlazor, and the MCP C# SDK**

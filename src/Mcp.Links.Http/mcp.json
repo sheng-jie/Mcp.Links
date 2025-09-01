@@ -5,6 +5,11 @@
       "type": "http",
       "url": "https://csharp.starworks.cc/mcp"
     },
+    "microsoft-learn": {
+      "enabled": false,
+      "type": "http",
+      "url": "https://learn.microsoft.com/api/mcp"
+    },
     "edgeone-pages-mcp": {
       "enabled": true,
       "type": "stdio",
