@@ -1,4 +1,8 @@
 using System;
+using System.ComponentModel;
+using ModelContextProtocol;
+using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 
 namespace Mcp.HelloWorld.Server.Tools;
 
@@ -6,7 +10,7 @@ namespace Mcp.HelloWorld.Server.Tools;
 [McpServerToolType]
 public class LongRunningTools
 {
-    [McpServerTool, Description("Demonstrates a long running tool with progress updates")]
+    [McpServerTool(Name = "longRunningOperation"), Description("Demonstrates a long running tool with progress updates")]
     public static async Task<string> LongRunningTool(
         IMcpServer server,
         RequestContext<CallToolRequestParams> context,
@@ -29,7 +33,7 @@ public class LongRunningTools
                     Progress = new ProgressNotificationValue
                     {
                         Progress = i,
-                        Total = steps,
+                        Total = steps,                        
                         Message = $"Step {i} of {steps} completed.",
                     },
                 });
